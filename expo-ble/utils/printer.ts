@@ -80,7 +80,7 @@ export const buildPrintMessage = async (data: any): Promise<string> => {
 
   cmd += setAlignment("center")
   cmd += setUnderline(true)
-  cmd += "TESTE DE IMPRESSÃO"
+  cmd += data.message
   cmd += breakLine(1)
   cmd += setUnderline(false)
   cmd += setAlignment("left")

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Stepcar",
-    "slug": "Stepcar App",
+    "slug": "Stepcar-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,9 +17,6 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "android.permission.BLUETOOTH",
-        "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
@@ -50,12 +47,20 @@
             "peripheral",
             "central"
           ],
-          "bluetoothAlwaysPermission": "Autorizar $(PRODUCT_NAME) conectarse a dispositivos Bluetooth"
+          "bluetoothAlwaysPermission": "Permitir $(PRODUCT_NAME) se conectar a dispositivos Bluetooth"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "8d71e94a-bf84-4463-998b-670e480fa6ef"
+      }
     }
   }
 }

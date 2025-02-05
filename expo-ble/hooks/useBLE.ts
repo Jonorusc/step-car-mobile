@@ -15,8 +15,8 @@ interface BLEPrinterHook {
   stopScan: () => void
   connect: (device: Device) => Promise<void>
   disconnect: () => Promise<void>
-  sendMessageToPrinter: (characteristic: Characteristic, data: any) => Promise<boolean>
-  isConnected: boolean,
+  print: (data: any) => Promise<void>
+  isConnected: boolean
   requestPermissions: () => Promise<boolean>
 }
 
@@ -24,6 +24,7 @@ function useBLE(): BLEPrinterHook {
   const [allDevices, setAllDevices] = useState<Device[]>([])
   const [connectedDevice, setConnectedDevice] = useState<Device | null>(null)
   const [characteristic, setCharacteristic] = useState<Characteristic | null>(null)
+
   const requestAndroid31Permissions = async () => {
     const bluetoothScanPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, {
       title: "Permissão de Localização",
@@ -124,6 +125,7 @@ function useBLE(): BLEPrinterHook {
         })
       }
     })
+
   const disconnect = useCallback(async () => {
     if (connectedDevice) {
       await bleManager.cancelDeviceConnection(connectedDevice.id)
@@ -131,6 +133,13 @@ function useBLE(): BLEPrinterHook {
       setCharacteristic(null)
     }
   }, [bleManager, connectedDevice])
+
+  const print = async (data: any) => {
+    if (connectedDevice && characteristic) {
+      await sendMessageToPrinter(characteristic, data)
+    }
+  }
+
 
   const sendMessageToPrinter = async (characteristic: Characteristic, data: any): Promise<boolean> => {
     try {
@@ -160,8 +169,8 @@ function useBLE(): BLEPrinterHook {
     stopScan,
     disconnect,
     isConnected: !!connectedDevice,
-    sendMessageToPrinter,
-    requestPermissions
+    print,
+    requestPermissions,
   }
 }
 

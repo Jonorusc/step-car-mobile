@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import DeviceModal from "@/components/devices-modal"
 
 function Index() {
-  const { scan, requestPermissions } = useBLE()
+  const { scan, requestPermissions, stopScan } = useBLE()
   const handleOnMessage = (event: WebViewMessageEvent) => {
     const data = event.nativeEvent.data
     if (!data) return
@@ -20,6 +20,10 @@ function Index() {
     const isPermissionsEnabled = await requestPermissions()
     if (isPermissionsEnabled) {
       scan()
+
+      setTimeout(() => {
+        stopScan()
+      }, 10 * 1000)
     }
   }
 
@@ -34,11 +38,9 @@ function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View>
-        <WebView style={styles.container} source={{ uri: "https://stepcar.com.br" }} onMessage={handleOnMessage} />
-        <Text onPress={openModal} >Testar</Text>
-        <DeviceModal closeModal={hideModal} visible={isModalVisible} />
-      </View>
+      <Text onPress={openModal}>Testar</Text>
+      <WebView source={{ uri: "https://stepcar.com.br" }} onMessage={handleOnMessage} />
+      <DeviceModal closeModal={hideModal} visible={isModalVisible} />
     </SafeAreaView>
   )
 }
@@ -49,6 +51,5 @@ const styles = StyleSheet.create({
     // marginTop: Constants.statusBarHeight,
   },
 })
-
 
 export default Index

@@ -39,7 +39,7 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = (props) => {
 }
 
 const DeviceModal: FC<DeviceModalProps> = (props) => {
-  const { connect: connectToDevice, devices, isConnected } = useBLE()
+  const { connect: connectToDevice, devices, isConnected, print } = useBLE()
   const { visible, closeModal } = props
 
   const renderDeviceModalListItem = useCallback(
@@ -51,23 +51,45 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
 
   return (
     <Modal style={modalStyle.modalContainer} animationType="slide" transparent={false} visible={visible}>
-      
       <SafeAreaView style={modalStyle.modalTitle}>
         <Text style={modalStyle.modalTitleText}>Toque em um dispositivo para conectar</Text>
-        <Text>{JSON.stringify(devices)}</Text>
+        {devices.length === 0 && (
+          <Text
+            style={{
+              textAlign: "center",
+              marginTop: 20,
+              fontSize: 18,
+              fontWeight: "400",
+            }}
+          >
+            Nenhum dispositivo encontrado
+          </Text>
+        )}
         <FlatList
           contentContainerStyle={modalStyle.modalFlatlistContiner}
           data={devices}
           renderItem={renderDeviceModalListItem}
         />
-        {/* {isConnected && ( */}
-          <View style={modalStyle.ctaButton}>
+        {isConnected ? (
+          <TouchableOpacity style={modalStyle.ctaButton} onPress={() => print({ message: "Teste de impressão" })}>
             <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
-          </View>
-        {/* )} */}
-          <TouchableOpacity style={modalStyle.ctaButtonOutlined} onPress={closeModal}>
-            <Text style={modalStyle.ctaButtonTextOutlined}>Cancelar</Text>
           </TouchableOpacity>
+        ) : (
+          <Text
+            style={{
+              textAlign: "center",
+              marginTop: 20,
+              fontSize: 18,
+              fontWeight: "400",
+              marginBottom: 20
+            }}
+          >
+            Conecte-se a uma impressora
+          </Text>
+        )}
+        <TouchableOpacity style={modalStyle.ctaButtonOutlined} onPress={closeModal}>
+          <Text style={modalStyle.ctaButtonTextOutlined}>Cancelar</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     </Modal>
   )
@@ -96,7 +118,7 @@ const modalStyle = StyleSheet.create({
   },
   modalTitleText: {
     marginTop: 40,
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: "bold",
     marginHorizontal: 20,
     textAlign: "center",
@@ -129,6 +151,15 @@ const modalStyle = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "white",
+  },
+  notConnected: {
+    backgroundColor: "#f2f2f2",
+    justifyContent: "center",
+    alignItems: "center",
+    height: 50,
+    marginHorizontal: 20,
+    marginBottom: 5,
+    borderRadius: 8,
   },
 })
 
