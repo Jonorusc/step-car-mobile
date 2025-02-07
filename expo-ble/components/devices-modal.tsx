@@ -1,5 +1,5 @@
 import useBLE from "@/hooks/useBLE"
-import React, { FC, useCallback } from "react"
+import React, { FC, useCallback, useState } from "react"
 import {
   FlatList,
   ListRenderItemInfo,
@@ -9,38 +9,65 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native"
 import { Device } from "react-native-ble-plx"
 
 type DeviceModalListItemProps = {
   item: ListRenderItemInfo<Device>
-  connectToDevice: (device: Device) => void
+  connectToDevice: (device: Device) => Promise<boolean>
   closeModal: () => void
 }
 
 type DeviceModalProps = {
   visible: boolean
   closeModal: () => void
+  devices: Device[]
+  connectToDevice: (device: Device) => Promise<boolean>
+  isConnected: boolean
+  print: (data: any) => void
 }
 
 const DeviceModalListItem: FC<DeviceModalListItemProps> = (props) => {
   const { item, connectToDevice, closeModal } = props
-
-  const connectAndCloseModal = useCallback(() => {
-    connectToDevice(item.item)
-    closeModal()
+  const [error, setError] = useState("")
+  const [connecting, setConnecting] = useState(false)
+  const connectAndCloseModal = useCallback(async () => {
+    try {
+      setConnecting(true)
+      setError("")
+      const connected = await connectToDevice(item.item)
+      console.log(connected)
+      if (!connected) {
+        const identifier = item.item.name ?? item.item.id
+        setError("Não foi possível conectar ao dispositivo " + identifier)
+      }
+    } catch {
+      // send the error message
+    } finally {
+      setConnecting(false)
+    }
+    // closeModal()
   }, [closeModal, connectToDevice, item.item])
 
   return (
-    <TouchableOpacity onPress={connectAndCloseModal} style={modalStyle.ctaButton}>
-      <Text style={modalStyle.ctaButtonText}>{item.item.name}</Text>
+    <TouchableOpacity onPress={connectAndCloseModal} style={modalStyle.itemButton}>
+      {connecting ? (
+        <>
+        <Text style={modalStyle.itemText}>Conectando </Text>
+        <ActivityIndicator size="small" color="#fff" />
+        </>
+      ) : error.includes(item.item.id ?? item.item.name) ? (
+        <Text style={{ color: "red" }}>{error}</Text>
+      ) : (
+        <Text style={modalStyle.itemText}>{item.item.name ?? item.item.id}</Text>
+      )}
     </TouchableOpacity>
   )
 }
 
 const DeviceModal: FC<DeviceModalProps> = (props) => {
-  const { connect: connectToDevice, devices, isConnected, print } = useBLE()
-  const { visible, closeModal } = props
+  const { visible, closeModal, devices, connectToDevice, isConnected, print } = props
 
   const renderDeviceModalListItem = useCallback(
     (item: ListRenderItemInfo<Device>) => {
@@ -69,6 +96,7 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
           contentContainerStyle={modalStyle.modalFlatlistContiner}
           data={devices}
           renderItem={renderDeviceModalListItem}
+          keyExtractor={(item) => item.id.toString()}
         />
         {isConnected ? (
           <TouchableOpacity style={modalStyle.ctaButton} onPress={() => print({ message: "Teste de impressão" })}>
@@ -81,7 +109,7 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
               marginTop: 20,
               fontSize: 18,
               fontWeight: "400",
-              marginBottom: 20
+              marginBottom: 20,
             }}
           >
             Conecte-se a uma impressora
@@ -159,6 +187,24 @@ const modalStyle = StyleSheet.create({
     height: 50,
     marginHorizontal: 20,
     marginBottom: 5,
+    borderRadius: 8,
+  },
+  itemText: {
+    fontSize: 16,
+    fontWeight: "400",
+    textAlign: "center",
+    color: "#fff",
+  },
+  itemButton: {
+    backgroundColor: "#020617",
+    flexDirection: "row",
+    height: 50,
+    justifyContent: "center",
+    gap: 10,
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 5,
+    paddingVertical: 15,
     borderRadius: 8,
   },
 })
