@@ -1,4 +1,6 @@
+import { CUPOM } from "@/types"
 import { Buffer } from "buffer"
+import { useCoinsFormatted } from "./currency"
 
 const ESC = "\x1B"
 const GS = "\x1D"
@@ -72,20 +74,86 @@ const buildQRCodeCommandFromObject = (data: { username: string; password: string
 
 const initializePrinter = () => `${ESC}@`
 
-export const buildPrintMessage = async (data: any): Promise<string> => {
+export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
+  let total_price = 0
   let cmd = ""
-  // Initialize printer
+
+  // Inicializa a impressora
   cmd += initializePrinter()
   cmd += breakLine(2)
 
+  // Nome da empresa (centralizado)
   cmd += setAlignment("center")
-  cmd += setUnderline(true)
-  cmd += data.message
+  cmd += setBold(true)
+  cmd += "StepCar (teste)" + "\n"
+  cmd += setBold(false)
+  cmd += printDividerLine()
   cmd += breakLine(1)
-  cmd += setUnderline(false)
-  cmd += setAlignment("left")
 
-  cmd += breakLine(3)
+  // Seção Registro
+  cmd += setBold(true)
+  cmd += "Registro\n"
+  cmd += setBold(false)
+  cmd += breakLine(1)
+  cmd += setAlignment("left")
+  cmd +=
+    `Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}`.padEnd(20) +
+    `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
+  cmd += `Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`
+  cmd += breakLine(1)
+  cmd += printDividerLine()
+  cmd += breakLine(1)
+
+  if (data.collectCategoriesToModal.length > 0) {
+    // Seção Serviços
+    cmd += setAlignment("center")
+    cmd += setBold(true)
+    cmd += "Serviços\n"
+    cmd += setBold(false)
+    cmd += breakLine(1)
+
+    // Lista de serviços
+    cmd += setAlignment("left")
+    data.collectCategoriesToModal.forEach((category: any, key: number) => {
+      // Tipo de serviço
+      cmd += setBold(true)
+      cmd += category.label + "\n"
+      cmd += setBold(false)
+
+      // exibe cada serviço
+
+      data.collectFormattedServicesToModal
+        .filter((service: any) => service.category_id === category.label)
+        .forEach((service: any) => {
+          total_price += parseFloat(service.price)
+          cmd += `  ${service.name.padEnd(20)} ${useCoinsFormatted(service.price)}\n`
+        })
+    })
+    cmd += breakLine(1)
+    cmd += printDividerLine()
+  }
+
+  // Seção Valor
+  cmd += setAlignment("center")
+  cmd += setBold(true)
+  cmd += "Valor\n"
+  cmd += setBold(false)
+  cmd += printDividerLine()
+  cmd += breakLine(1)
+
+  cmd += setTextSize(2, 2) // Fonte grande
+  cmd += `R$ ${total_price.toFixed(2).replace(".", ",")}\n`
+  cmd += setTextSize(1, 1) // Reset tamanho da fonte
+  cmd += breakLine(1)
+
+  // Informações adicionais
+  cmd += setAlignment("left")
+  cmd += `CNPJ: adicionar aqui\n`
+  cmd += breakLine(1)
+  cmd += "Funcionamento de SEGUNDA Á SEXTA das 09:00 às 19:00\n"
+  cmd +=
+    "Não nos responsabilizamos por quaisquer objetos perdidos ou esquecidos no veículo. Sugerimos que você analise o veículo antes de deixá-lo para lavagem.\n"
+  cmd += breakLine(2)
 
   return cmd
 }

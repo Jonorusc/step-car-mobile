@@ -5,6 +5,7 @@ import { PERMISSIONS, requestMultiple, RESULTS } from "react-native-permissions"
 
 import { BleManager, Characteristic, Device, ScanMode } from "react-native-ble-plx"
 import { buildPrintMessage } from "@/utils/printer"
+import { CUPOM } from "@/types"
 
 const bleManager = new BleManager()
 
@@ -14,7 +15,7 @@ interface BLEPrinterHook {
   stopScan: () => void
   connect: (device: Device) => Promise<boolean>
   disconnect: () => Promise<void>
-  print: (data: any) => Promise<void>
+  print: (data: CUPOM) => Promise<void>
   isConnected: boolean
   ConnectedDevice: Device | null
   requestPermissions: () => Promise<boolean>
@@ -131,7 +132,7 @@ function useBLE(): BLEPrinterHook {
     }
   }, [bleManager, connectedDevice])
 
-  const print = async (data: any) => {
+  const print = async (data: CUPOM) => {
     if (connectedDevice && characteristic) {
       await sendMessageToPrinter(characteristic, data)
     }

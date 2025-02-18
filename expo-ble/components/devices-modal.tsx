@@ -1,4 +1,4 @@
-import useBLE from "@/hooks/useBLE"
+import { CUPOM } from "@/types"
 import React, { FC, useCallback, useState } from "react"
 import {
   FlatList,
@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
+  Touchable,
 } from "react-native"
 import { Device } from "react-native-ble-plx"
 
@@ -17,33 +19,44 @@ type DeviceModalListItemProps = {
   item: ListRenderItemInfo<Device>
   connectToDevice: (device: Device) => Promise<boolean>
   closeModal: () => void
+  connectedDevice: Device | null
+  disconnect: () => Promise<void>
 }
 
 type DeviceModalProps = {
+  cupomData: CUPOM | null
   visible: boolean
   closeModal: () => void
+  disconnect: () => Promise<void>
   devices: Device[]
   connectToDevice: (device: Device) => Promise<boolean>
-  isConnected: boolean
-  print: (data: any) => void
+  connectedDevice: Device | null
+  print: (data: CUPOM) => void
 }
 
-const DeviceModalListItem: FC<DeviceModalListItemProps> = (props) => {
-  const { item, connectToDevice, closeModal } = props
-  const [error, setError] = useState("")
+const DeviceModalListItem: FC<DeviceModalListItemProps> = ({
+  item,
+  connectToDevice,
+  closeModal,
+  connectedDevice,
+  disconnect,
+}) => {
   const [connecting, setConnecting] = useState(false)
+
+  const isDeviceConnected = useCallback(() => {
+    return connectedDevice?.id === item.item.id
+  }, [connectedDevice])
+
   const connectAndCloseModal = useCallback(async () => {
     try {
       setConnecting(true)
-      setError("")
       const connected = await connectToDevice(item.item)
-      console.log(connected)
       if (!connected) {
         const identifier = item.item.name ?? item.item.id
-        setError("Não foi possível conectar ao dispositivo " + identifier)
+        Alert.alert("Erro", "Não foi possível conectar ao dispositivo" + identifier)
       }
     } catch {
-      // send the error message
+      Alert.alert("Erro", "Não foi possível conectar ao dispositivo")
     } finally {
       setConnecting(false)
     }
@@ -51,33 +64,75 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = (props) => {
   }, [closeModal, connectToDevice, item.item])
 
   return (
-    <TouchableOpacity onPress={connectAndCloseModal} style={modalStyle.itemButton}>
-      {connecting ? (
-        <>
-        <Text style={modalStyle.itemText}>Conectando </Text>
-        <ActivityIndicator size="small" color="#fff" />
-        </>
-      ) : error.includes(item.item.id ?? item.item.name) ? (
-        <Text style={{ color: "red" }}>{error}</Text>
-      ) : (
-        <Text style={modalStyle.itemText}>{item.item.name ?? item.item.id}</Text>
+    <TouchableOpacity
+      style={{
+        backgroundColor: isDeviceConnected() ? "#38a10f" : "#020617",
+        borderRadius: 8,
+        marginHorizontal: 20,
+        marginBottom: 5,
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+      onPress={connectAndCloseModal}
+    >
+      <TouchableOpacity style={modalStyle.itemButton}>
+        {connecting ? (
+          <>
+            <Text style={modalStyle.itemText}>Conectando </Text>
+            <ActivityIndicator size="small" color="#fff" />
+          </>
+        ) : (
+          <Text style={modalStyle.itemText}>{item.item.name ?? item.item.id}</Text>
+        )}
+      </TouchableOpacity>
+      {isDeviceConnected() && (
+        <TouchableOpacity
+          style={modalStyle.disconnectButton}
+          onPress={(event) => {
+            event.preventDefault()
+            disconnect()
+          }}
+        >
+          <Text style={modalStyle.disconnectButtonText}>Desconectar</Text>
+        </TouchableOpacity>
       )}
     </TouchableOpacity>
   )
 }
 
-const DeviceModal: FC<DeviceModalProps> = (props) => {
-  const { visible, closeModal, devices, connectToDevice, isConnected, print } = props
-
+const DeviceModal: FC<DeviceModalProps> = ({
+  visible,
+  closeModal,
+  devices,
+  connectToDevice,
+  connectedDevice,
+  print,
+  disconnect,
+  cupomData,
+}) => {
   const renderDeviceModalListItem = useCallback(
     (item: ListRenderItemInfo<Device>) => {
-      return <DeviceModalListItem item={item} connectToDevice={connectToDevice} closeModal={closeModal} />
+      return (
+        <DeviceModalListItem
+          disconnect={disconnect}
+          item={item}
+          connectToDevice={connectToDevice}
+          closeModal={closeModal}
+          connectedDevice={connectedDevice}
+        />
+      )
     },
     [closeModal, connectToDevice]
   )
 
+  const handlePrint = useCallback(() => {
+    if (cupomData) print(cupomData)
+  }, [cupomData])
+
   return (
-    <Modal style={modalStyle.modalContainer} animationType="slide" transparent={false} visible={visible}>
+    <Modal style={modalStyle.modalContainer} animationType="slide" transparent={true} visible={visible}>
       <SafeAreaView style={modalStyle.modalTitle}>
         <Text style={modalStyle.modalTitleText}>Toque em um dispositivo para conectar</Text>
         {devices.length === 0 && (
@@ -93,13 +148,14 @@ const DeviceModal: FC<DeviceModalProps> = (props) => {
           </Text>
         )}
         <FlatList
+          style={{ flex: 1 }} // Add this line
           contentContainerStyle={modalStyle.modalFlatlistContiner}
           data={devices}
           renderItem={renderDeviceModalListItem}
           keyExtractor={(item) => item.id.toString()}
         />
-        {isConnected ? (
-          <TouchableOpacity style={modalStyle.ctaButton} onPress={() => print({ message: "Teste de impressão" })}>
+        {connectedDevice?.isConnected ? (
+          <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
             <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
           </TouchableOpacity>
         ) : (
@@ -131,6 +187,7 @@ const modalStyle = StyleSheet.create({
   modalFlatlistContiner: {
     flex: 1,
     justifyContent: "center",
+    paddingVertical: 20,
   },
   modalCellOutline: {
     borderWidth: 1,
@@ -143,6 +200,7 @@ const modalStyle = StyleSheet.create({
   modalTitle: {
     flex: 1,
     backgroundColor: "#f2f2f2",
+    paddingBottom: 20,
   },
   modalTitleText: {
     marginTop: 40,
@@ -196,7 +254,7 @@ const modalStyle = StyleSheet.create({
     color: "#fff",
   },
   itemButton: {
-    backgroundColor: "#020617",
+    backgroundColor: "transparent",
     flexDirection: "row",
     height: 50,
     justifyContent: "center",
@@ -206,6 +264,19 @@ const modalStyle = StyleSheet.create({
     marginBottom: 5,
     paddingVertical: 15,
     borderRadius: 8,
+  },
+  disconnectButton: {
+    backgroundColor: "#ee6565",
+    justifyContent: "center",
+    alignItems: "center",
+    height: 30,
+    marginHorizontal: 20,
+    padding: 5,
+    marginBottom: 5,
+    borderRadius: 8,
+  },
+  disconnectButtonText: {
+    color: "#fff",
   },
 })
 

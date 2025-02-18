@@ -1,17 +1,21 @@
 import { WebView, WebViewMessageEvent } from "react-native-webview"
-import { StyleSheet, Text, View } from "react-native"
+import { Alert, StyleSheet, Text, View } from "react-native"
 import { useState } from "react"
 import useBLE from "@/hooks/useBLE"
 import { SafeAreaView } from "react-native-safe-area-context"
 import DeviceModal from "@/components/devices-modal"
+import type { CUPOM } from "../types"
 
 function Index() {
-  const { scan, requestPermissions, print, devices, connect, ConnectedDevice, stopScan } = useBLE()
+  const [cupomData, setCupomData] = useState<CUPOM | null>(null)
+  const { scan, requestPermissions, print, devices, connect, ConnectedDevice, disconnect } = useBLE()
   const handleOnMessage = (event: WebViewMessageEvent) => {
     const data = event.nativeEvent.data
     if (!data) return
+
+    const cupomData = JSON.parse(data) as CUPOM
+    setCupomData(cupomData)
     openModal()
-    // router.push({ pathname: "/printer", params: { print_data: data } })
   }
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false)
@@ -19,14 +23,15 @@ function Index() {
   const scanForDevices = async () => {
     const isPermissionsEnabled = await requestPermissions()
     if (isPermissionsEnabled) {
-      console.log("Scanning for devices")
       scan()
 
       setTimeout(() => {
         console.log(devices)
         // stopScan()
       }, 10000)
-    } else console.log(`not allowed`)
+    } else {
+      Alert.alert("Permissão negada", "Você precisa permitir o acesso ao Bluetooth para continuar")
+    }
   }
 
   const hideModal = () => {
@@ -43,12 +48,14 @@ function Index() {
       <Text onPress={openModal}>Testar</Text>
       <WebView source={{ uri: "https://stepcar.com.br" }} onMessage={handleOnMessage} />
       <DeviceModal
+        cupomData={cupomData}
         closeModal={hideModal}
         visible={isModalVisible}
-        isConnected={ConnectedDevice !== null}
+        connectedDevice={ConnectedDevice}
         connectToDevice={connect}
         devices={devices}
         print={print}
+        disconnect={disconnect}
       />
     </SafeAreaView>
   )
