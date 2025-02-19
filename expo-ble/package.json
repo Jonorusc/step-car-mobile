@@ -38,13 +38,14 @@
     "react-dom": "18.3.1",
     "react-native": "0.76.6",
     "react-native-base64": "^0.2.1",
-    "react-native-ble-plx": "^3.4.0",
-    "react-native-gesture-handler": "^2.23.0",
+    "react-native-ble-plx": "^3.5.0",
+    "react-native-gesture-handler": "^2.23.1",
     "react-native-permissions": "^5.2.5",
     "react-native-safe-area-context": "^5.2.0",
-    "react-native-screens": "^4.6.0",
+    "react-native-screens": "^4.7.0",
     "react-native-web": "~0.19.13",
-    "react-native-webview": "^13.13.2"
+    "react-native-webview": "^13.13.2",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

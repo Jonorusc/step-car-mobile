@@ -1,14 +1,15 @@
 import { WebView, WebViewMessageEvent } from "react-native-webview"
 import { Alert, StyleSheet, Text, View } from "react-native"
-import { useState } from "react"
-import useBLE from "@/hooks/useBLE"
+import { useEffect, useState } from "react"
+import useBLE, { useBLEStore } from "@/hooks/useBLE"
 import { SafeAreaView } from "react-native-safe-area-context"
 import DeviceModal from "@/components/devices-modal"
 import type { CUPOM } from "../types"
 
 function Index() {
   const [cupomData, setCupomData] = useState<CUPOM | null>(null)
-  const { scan, requestPermissions, print, devices, connect, ConnectedDevice, disconnect } = useBLE()
+  const { scan, requestPermissions, print, connect, disconnect } = useBLE()
+  const { connectedDevice, devices } = useBLEStore()
   const handleOnMessage = (event: WebViewMessageEvent) => {
     const data = event.nativeEvent.data
     if (!data) return
@@ -24,11 +25,6 @@ function Index() {
     const isPermissionsEnabled = await requestPermissions()
     if (isPermissionsEnabled) {
       scan()
-
-      setTimeout(() => {
-        console.log(devices)
-        // stopScan()
-      }, 10000)
     } else {
       Alert.alert("Permissão negada", "Você precisa permitir o acesso ao Bluetooth para continuar")
     }
@@ -43,6 +39,13 @@ function Index() {
     setIsModalVisible(true)
   }
 
+  useEffect(() => {
+    Alert.alert(
+      "Stepcar",
+      "Imprimindo cupom (estara imprimindo um cupom de teste feito a partir de dados ficticios)\n\nClique em 'Testar' para abrir o modal de impressão"
+    )
+  }, [])
+
   return (
     <SafeAreaView style={styles.container}>
       <Text onPress={openModal}>Testar</Text>
@@ -51,7 +54,7 @@ function Index() {
         cupomData={cupomData}
         closeModal={hideModal}
         visible={isModalVisible}
-        connectedDevice={ConnectedDevice}
+        connectedDevice={connectedDevice}
         connectToDevice={connect}
         devices={devices}
         print={print}

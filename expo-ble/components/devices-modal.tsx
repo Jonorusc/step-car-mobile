@@ -1,3 +1,4 @@
+import { useBLEStore } from "@/hooks/useBLE"
 import { CUPOM } from "@/types"
 import React, { FC, useCallback, useState } from "react"
 import {
@@ -8,10 +9,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  View,
   ActivityIndicator,
   Alert,
-  Touchable,
 } from "react-native"
 import { Device } from "react-native-ble-plx"
 
@@ -34,14 +33,9 @@ type DeviceModalProps = {
   print: (data: CUPOM) => void
 }
 
-const DeviceModalListItem: FC<DeviceModalListItemProps> = ({
-  item,
-  connectToDevice,
-  closeModal,
-  connectedDevice,
-  disconnect,
-}) => {
+const DeviceModalListItem: FC<DeviceModalListItemProps> = ({ item, connectToDevice, closeModal, disconnect }) => {
   const [connecting, setConnecting] = useState(false)
+  const { connectedDevice } = useBLEStore()
 
   const isDeviceConnected = useCallback(() => {
     return connectedDevice?.id === item.item.id
@@ -53,10 +47,10 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = ({
       const connected = await connectToDevice(item.item)
       if (!connected) {
         const identifier = item.item.name ?? item.item.id
-        Alert.alert("Erro", "Não foi possível conectar ao dispositivo" + identifier)
+        Alert.alert("Stepcar", "Não foi possível conectar ao dispositivo " + identifier)
       }
     } catch {
-      Alert.alert("Erro", "Não foi possível conectar ao dispositivo")
+      Alert.alert("Stepcar", "Não foi possível conectar ao dispositivo")
     } finally {
       setConnecting(false)
     }
@@ -77,7 +71,7 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = ({
       }}
       onPress={connectAndCloseModal}
     >
-      <TouchableOpacity style={modalStyle.itemButton}>
+      <TouchableOpacity style={modalStyle.itemButton} onPress={connectAndCloseModal}>
         {connecting ? (
           <>
             <Text style={modalStyle.itemText}>Conectando </Text>
@@ -105,13 +99,13 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = ({
 const DeviceModal: FC<DeviceModalProps> = ({
   visible,
   closeModal,
-  devices,
   connectToDevice,
   connectedDevice,
   print,
   disconnect,
   cupomData,
 }) => {
+  const { devices } = useBLEStore()
   const renderDeviceModalListItem = useCallback(
     (item: ListRenderItemInfo<Device>) => {
       return (
@@ -155,7 +149,28 @@ const DeviceModal: FC<DeviceModalProps> = ({
           keyExtractor={(item) => item.id.toString()}
         />
         {connectedDevice?.isConnected ? (
-          <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
+          <TouchableOpacity
+            style={modalStyle.ctaButton}
+            onPress={() => {
+              Alert.alert(
+                "Stepcar",
+                "Imprimindo cupom (estara imprimindo um cupom de teste feito a partir de dados ficticios)"
+              )
+              print({
+                vehicleToCupom: {
+                  model: "Toyota Corolla",
+                  plate: "ABC-1234",
+                  color: "Preto",
+                },
+                collectCategoriesToModal: [{ label: "Lavagem" }, { label: "Polimento" }],
+                collectFormattedServicesToModal: [
+                  { category_id: "Lavagem", name: "Lavagem Simples", price: "30.00" },
+                  { category_id: "Lavagem", name: "Lavagem Completa", price: "50.00" },
+                  { category_id: "Polimento", name: "Polimento de Faróis", price: "80.00" },
+                ],
+              })
+            }}
+          >
             <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
           </TouchableOpacity>
         ) : (

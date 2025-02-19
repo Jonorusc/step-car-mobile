@@ -3,11 +3,29 @@ import { useCallback, useState } from "react"
 import { Alert, Platform, PermissionsAndroid } from "react-native"
 import { PERMISSIONS, requestMultiple, RESULTS } from "react-native-permissions"
 
-import { BleManager, Characteristic, Device, ScanMode } from "react-native-ble-plx"
+import { BleManager, Characteristic, Device } from "react-native-ble-plx"
 import { buildPrintMessage } from "@/utils/printer"
 import { CUPOM } from "@/types"
 
+import { create } from "zustand"
+
 const bleManager = new BleManager()
+
+export const useBLEStore = create<{
+  devices: Device[]
+  connectedDevice: Device | null
+  characteristic: Characteristic | null
+  setDevices: (devices: Device[]) => void
+  setConnectedDevice: (connectedDevice: Device | null) => void
+  setCharacteristic: (characteristic: Characteristic | null) => void
+}>((set) => ({
+  devices: [],
+  connectedDevice: null,
+  characteristic: null,
+  setDevices: (devices: Device[]) => set({ devices }),
+  setConnectedDevice: (connectedDevice: Device | null) => set({ connectedDevice }),
+  setCharacteristic: (characteristic: Characteristic | null) => set({ characteristic }),
+}))
 
 interface BLEPrinterHook {
   devices: Device[]
@@ -22,9 +40,7 @@ interface BLEPrinterHook {
 }
 
 function useBLE(): BLEPrinterHook {
-  const [allDevices, setAllDevices] = useState<Device[]>([])
-  const [connectedDevice, setConnectedDevice] = useState<Device | null>(null)
-  const [characteristic, setCharacteristic] = useState<Characteristic | null>(null)
+  const { devices, connectedDevice, characteristic, setDevices, setConnectedDevice, setCharacteristic } = useBLEStore()
 
   const requestPermissions = async () => {
     if (Platform.OS === "ios") {
@@ -50,7 +66,6 @@ function useBLE(): BLEPrinterHook {
           granted["android.permission.ACCESS_FINE_LOCATION"] === PermissionsAndroid.RESULTS.GRANTED
         ) {
           bleManager.onStateChange((state) => {
-            console.log(`mudou alguma coisag`, state)
             if (state === "PoweredOn") {
               scan()
             } else if (state === "PoweredOff") {
@@ -108,18 +123,20 @@ function useBLE(): BLEPrinterHook {
     bleManager.startDeviceScan(null, { allowDuplicates: false, legacyScan: true }, (error, device) => {
       if (error) {
         console.log(error)
+        Alert.alert(
+          "Stepcar",
+          "Não foi possível escanear dispositivos\n\nVerifique se o bluetooth está ligado e tente novamente"
+        )
+        // turn the bluetooth on and try again
+
+        return
       }
 
       if (device) {
-        console.log(device.name ?? device.localName, device.isConnectable)
-        setAllDevices((prevState: Device[]) => {
-          if (!isDuplicteDevice(prevState, device)) {
-            console.log(`adicionando`, device)
-            return [...prevState, device]
-          }
-          console.log(`não adicionando`, device)
-          return prevState
-        })
+        const _devices = useBLEStore.getState().devices
+        if (!isDuplicteDevice(_devices, device)) {
+          setDevices([..._devices, device])
+        }
       }
     })
   }
@@ -161,7 +178,7 @@ function useBLE(): BLEPrinterHook {
 
   return {
     connect: connectToDevice,
-    devices: allDevices,
+    devices,
     scan,
     stopScan,
     disconnect,
