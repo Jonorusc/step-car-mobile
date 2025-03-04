@@ -149,28 +149,7 @@ const DeviceModal: FC<DeviceModalProps> = ({
           keyExtractor={(item) => item.id.toString()}
         />
         {connectedDevice?.isConnected ? (
-          <TouchableOpacity
-            style={modalStyle.ctaButton}
-            onPress={() => {
-              Alert.alert(
-                "Stepcar",
-                "Imprimindo cupom (estara imprimindo um cupom de teste feito a partir de dados ficticios)"
-              )
-              print({
-                vehicleToCupom: {
-                  model: "Toyota Corolla",
-                  plate: "ABC-1234",
-                  color: "Preto",
-                },
-                collectCategoriesToModal: [{ label: "Lavagem" }, { label: "Polimento" }],
-                collectFormattedServicesToModal: [
-                  { category_id: "Lavagem", name: "Lavagem Simples", price: "30.00" },
-                  { category_id: "Lavagem", name: "Lavagem Completa", price: "50.00" },
-                  { category_id: "Polimento", name: "Polimento de Faróis", price: "80.00" },
-                ],
-              })
-            }}
-          >
+          <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
             <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
           </TouchableOpacity>
         ) : (

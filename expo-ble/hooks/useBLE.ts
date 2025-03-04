@@ -1,13 +1,13 @@
 /* eslint-disable no-bitwise */
-import { useCallback, useState } from "react"
+import { Buffer } from "buffer"
+import { CUPOM } from "@/types"
+import { create } from "zustand"
+import { useCallback} from "react"
+import { buildPrintMessage } from "@/utils/printer"
 import { Alert, Platform, PermissionsAndroid } from "react-native"
+import { BleManager, Characteristic, Device } from "react-native-ble-plx"
 import { PERMISSIONS, requestMultiple, RESULTS } from "react-native-permissions"
 
-import { BleManager, Characteristic, Device } from "react-native-ble-plx"
-import { buildPrintMessage } from "@/utils/printer"
-import { CUPOM } from "@/types"
-
-import { create } from "zustand"
 
 const bleManager = new BleManager()
 
@@ -31,7 +31,7 @@ interface BLEPrinterHook {
   devices: Device[]
   scan: () => void
   stopScan: () => void
-  connect: (device: Device) => Promise<boolean>
+  connectToDevice: (device: Device) => Promise<boolean>
   disconnect: () => Promise<void>
   print: (data: CUPOM) => Promise<void>
   isConnected: boolean
@@ -84,32 +84,46 @@ function useBLE(): BLEPrinterHook {
   const connectToDevice = useCallback(
     async (device: Device) => {
       try {
+        console.log(`Attempting to connect to device: ${device.name} (${device.id})`)
+
         const connected = await bleManager.connectToDevice(device.id)
         await connected.discoverAllServicesAndCharacteristics()
+
+        console.log(`Connected to ${device.name}, discovering services...`)
+
         const services = await connected.services()
+
+        let writableCharacteristic: Characteristic | null = null
 
         for (const service of services) {
           const characteristics = await service.characteristics()
 
           for (const characteristic of characteristics) {
+            console.log(`Found characteristic: ${characteristic.uuid}`)
             if (characteristic.isWritableWithResponse || characteristic.isWritableWithoutResponse) {
-              // Found a writable characteristic
-              setCharacteristic(characteristic)
+              writableCharacteristic = characteristic
             }
           }
         }
 
-        if (!characteristic) {
+        if (!writableCharacteristic) {
           Alert.alert("Erro", "O dispositivo conectado não é uma impressora")
           return false
         }
+
+        setCharacteristic(writableCharacteristic)
         setConnectedDevice(connected)
+
+        console.log("Connected successfully!")
+
         return true
       } catch (error) {
+        console.error("Failed to connect:", error)
+        Alert.alert("Erro", "Não foi possível conectar ao dispositivo")
         return false
       }
     },
-    [bleManager]
+    [bleManager, setConnectedDevice, setCharacteristic]
   )
 
   const isDuplicteDevice = (devices: Device[], nextDevice: Device) =>
@@ -119,16 +133,19 @@ function useBLE(): BLEPrinterHook {
     bleManager.stopDeviceScan()
   }, [bleManager])
 
-  const scan = () => {
+  const scan = async () => {
+    const state = await bleManager.state()
+    console.log("Bluetooth state:", state)
+
+    if (state !== "PoweredOn") {
+      Alert.alert("Erro", "Ative o Bluetooth para escanear dispositivos.")
+      return
+    }
+
     bleManager.startDeviceScan(null, { allowDuplicates: false, legacyScan: true }, (error, device) => {
       if (error) {
-        console.log(error)
-        Alert.alert(
-          "Stepcar",
-          "Não foi possível escanear dispositivos\n\nVerifique se o bluetooth está ligado e tente novamente"
-        )
-        // turn the bluetooth on and try again
-
+        console.log("Scan error:", error)
+        Alert.alert("Erro", "Não foi possível escanear dispositivos. Verifique se o Bluetooth está ligado.")
         return
       }
 
@@ -177,7 +194,7 @@ function useBLE(): BLEPrinterHook {
   }
 
   return {
-    connect: connectToDevice,
+    connectToDevice,
     devices,
     scan,
     stopScan,

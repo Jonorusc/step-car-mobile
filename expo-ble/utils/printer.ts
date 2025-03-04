@@ -74,6 +74,8 @@ const buildQRCodeCommandFromObject = (data: { username: string; password: string
 
 const initializePrinter = () => `${ESC}@`
 
+const encodeText = (text: string) => Buffer.from(text, "utf-8").toString("latin1")
+
 export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   let total_price = 0
   let cmd = ""
@@ -85,7 +87,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   // Nome da empresa (centralizado)
   cmd += setAlignment("center")
   cmd += setBold(true)
-  cmd += "StepCar (teste)" + "\n"
+  cmd += encodeText(data.establishment.nameByCompany) + "\n"
   cmd += setBold(false)
   cmd += printDividerLine()
   cmd += breakLine(1)
@@ -96,9 +98,8 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += setBold(false)
   cmd += breakLine(1)
   cmd += setAlignment("left")
-  cmd +=
-    `Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}`.padEnd(20) +
-    `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
+  cmd += `Modelo: ${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}\n`
+  cmd += `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
   cmd += `Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`
   cmd += breakLine(1)
   cmd += printDividerLine()
@@ -126,15 +127,15 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
         .filter((service: any) => service.category_id === category.label)
         .forEach((service: any) => {
           total_price += parseFloat(service.price)
-          cmd += `  ${service.name.padEnd(20)} ${useCoinsFormatted(service.price)}\n`
+          cmd += `  ${encodeText(service.name.padEnd(20))} ${useCoinsFormatted(service.price)}\n`
         })
     })
     cmd += breakLine(1)
     cmd += printDividerLine()
   }
 
-  // Seção Valor
   cmd += setAlignment("center")
+  // Seção Valor
   cmd += setBold(true)
   cmd += "Valor\n"
   cmd += setBold(false)
@@ -148,12 +149,13 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
 
   // Informações adicionais
   cmd += setAlignment("left")
-  cmd += `CNPJ: adicionar aqui\n`
+  cmd += "CNPJ: " + encodeText(data.establishment.document) + "\n"
   cmd += breakLine(1)
-  cmd += "Funcionamento de SEGUNDA Á SEXTA das 09:00 às 19:00\n"
-  cmd +=
+  cmd += encodeText("Funcionamento de SEGUNDA Á SEXTA das 09:00 às 19:00\n")
+  cmd += encodeText(
     "Não nos responsabilizamos por quaisquer objetos perdidos ou esquecidos no veículo. Sugerimos que você analise o veículo antes de deixá-lo para lavagem.\n"
-  cmd += breakLine(2)
+  )
+  cmd += breakLine(4)
 
   return cmd
 }

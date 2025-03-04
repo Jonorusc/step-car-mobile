@@ -8,7 +8,7 @@ import type { CUPOM } from "../types"
 
 function Index() {
   const [cupomData, setCupomData] = useState<CUPOM | null>(null)
-  const { scan, requestPermissions, print, connect, disconnect } = useBLE()
+  const { scan, requestPermissions, print, connectToDevice, disconnect } = useBLE()
   const { connectedDevice, devices } = useBLEStore()
   const handleOnMessage = (event: WebViewMessageEvent) => {
     const data = event.nativeEvent.data
@@ -48,14 +48,14 @@ function Index() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text onPress={openModal}>Testar</Text>
+      {/* <Text onPress={openModal}>Testar</Text> */}
       <WebView source={{ uri: "https://stepcar.com.br" }} onMessage={handleOnMessage} />
       <DeviceModal
         cupomData={cupomData}
         closeModal={hideModal}
         visible={isModalVisible}
         connectedDevice={connectedDevice}
-        connectToDevice={connect}
+        connectToDevice={connectToDevice}
         devices={devices}
         print={print}
         disconnect={disconnect}
