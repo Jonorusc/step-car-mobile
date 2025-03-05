@@ -2,16 +2,14 @@
 import { Buffer } from "buffer"
 import { CUPOM } from "@/types"
 import { create } from "zustand"
-import { useCallback} from "react"
+import { useCallback } from "react"
 import { buildPrintMessage } from "@/utils/printer"
 import { Alert, Platform, PermissionsAndroid } from "react-native"
 import { BleManager, Characteristic, Device } from "react-native-ble-plx"
 import { PERMISSIONS, requestMultiple, RESULTS } from "react-native-permissions"
 
-
-const bleManager = new BleManager()
-
 export const useBLEStore = create<{
+  bleManager: BleManager
   devices: Device[]
   connectedDevice: Device | null
   characteristic: Characteristic | null
@@ -19,6 +17,7 @@ export const useBLEStore = create<{
   setConnectedDevice: (connectedDevice: Device | null) => void
   setCharacteristic: (characteristic: Characteristic | null) => void
 }>((set) => ({
+  bleManager: new BleManager(),
   devices: [],
   connectedDevice: null,
   characteristic: null,
@@ -40,7 +39,8 @@ interface BLEPrinterHook {
 }
 
 function useBLE(): BLEPrinterHook {
-  const { devices, connectedDevice, characteristic, setDevices, setConnectedDevice, setCharacteristic } = useBLEStore()
+  const { devices, connectedDevice, characteristic, setDevices, setConnectedDevice, setCharacteristic, bleManager } =
+    useBLEStore()
 
   const requestPermissions = async () => {
     if (Platform.OS === "ios") {
