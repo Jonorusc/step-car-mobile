@@ -31,6 +31,8 @@ export const printDividerLine = (width: number = 32) => {
   return "".padStart(width, "-") // Creates a line with '-' spanning the specified width
 }
 
+const feedPaper = (lines = 5) => `${ESC}d${String.fromCharCode(lines)}`;
+
 const setQRErrorCorrection = (level: number = 48) => {
   // Level: 48 (L), 49 (M), 50 (Q), 51 (H)
   return `${GS}(k\x03\x00\x31\x45${String.fromCharCode(level)}`
@@ -46,6 +48,15 @@ const storeQRData = (data: string) => {
 const printStoredQR = () => {
   return `${GS}(k\x03\x00\x31\x51\x30`
 }
+
+const formatCNPJ = (cnpj: string) => {
+  cnpj = cnpj.replace(/\D/g, "");
+
+  return cnpj.replace(
+    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+    "$1.$2.$3/$4-$5"
+  );
+};
 
 const buildQRCodeCommandFromObject = (data: { username: string; password: string }): string => {
   // Serialize the data object to a JSON string
@@ -74,20 +85,22 @@ const buildQRCodeCommandFromObject = (data: { username: string; password: string
 
 const initializePrinter = () => `${ESC}@`
 
-const encodeText = (text: string) => Buffer.from(text, "utf-8").toString("latin1")
+const encodeText = (text: string) => Buffer.from(text, "utf-8")
 
 export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   let total_price = 0
   let cmd = ""
 
+  const setCodePageUTF8 = () => `${ESC}t\x10`
+
   // Inicializa a impressora
-  cmd += initializePrinter()
+  cmd += initializePrinter() + setCodePageUTF8()
   cmd += breakLine(2)
 
   // Nome da empresa (centralizado)
   cmd += setAlignment("center")
   cmd += setBold(true)
-  cmd += encodeText(data.establishment.nameByCompany) + "\n"
+  cmd += encodeText(data?.establishment.nameByCompany ?? "") + "\n"
   cmd += setBold(false)
   cmd += printDividerLine()
   cmd += breakLine(1)
@@ -124,10 +137,10 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
       // exibe cada serviço
 
       data.collectFormattedServicesToModal
-        .filter((service: any) => service.category_id === category.label)
+        .filter((service: any) => service.category_id === category.value)
         .forEach((service: any) => {
           total_price += parseFloat(service.price)
-          cmd += `  ${encodeText(service.name.padEnd(20))} ${useCoinsFormatted(service.price)}\n`
+          cmd += `${useCoinsFormatted(service.price)}\n`
         })
     })
     cmd += breakLine(1)
@@ -143,19 +156,19 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += breakLine(1)
 
   cmd += setTextSize(2, 2) // Fonte grande
-  cmd += `R$ ${total_price.toFixed(2).replace(".", ",")}\n`
+  cmd += `${useCoinsFormatted(total_price)}\n`
   cmd += setTextSize(1, 1) // Reset tamanho da fonte
   cmd += breakLine(1)
 
   // Informações adicionais
   cmd += setAlignment("left")
-  cmd += "CNPJ: " + encodeText(data.establishment.document) + "\n"
+  cmd += "CNPJ: " + encodeText(formatCNPJ(data?.establishment.document.toString())) + "\n"
   cmd += breakLine(1)
   cmd += encodeText("Funcionamento de SEGUNDA Á SEXTA das 09:00 às 19:00\n")
   cmd += encodeText(
     "Não nos responsabilizamos por quaisquer objetos perdidos ou esquecidos no veículo. Sugerimos que você analise o veículo antes de deixá-lo para lavagem.\n"
   )
-  cmd += breakLine(4)
+  cmd += feedPaper(2)
 
   return cmd
 }
