@@ -1,6 +1,6 @@
 import { WebView, WebViewMessageEvent } from "react-native-webview"
-import { Alert, StyleSheet, Text, View } from "react-native"
-import { useEffect, useState } from "react"
+import { Alert, StyleSheet } from "react-native"
+import { useState } from "react"
 import useBLE, { useBLEStore } from "@/hooks/useBLE"
 import { SafeAreaView } from "react-native-safe-area-context"
 import DeviceModal from "@/components/devices-modal"
