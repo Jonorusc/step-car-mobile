@@ -39,16 +39,8 @@ function Index() {
     setIsModalVisible(true)
   }
 
-  useEffect(() => {
-    Alert.alert(
-      "Stepcar",
-      "Imprimindo cupom (estara imprimindo um cupom de teste feito a partir de dados ficticios)\n\nClique em 'Testar' para abrir o modal de impressão"
-    )
-  }, [])
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* <Text onPress={openModal}>Testar</Text> */}
       <WebView source={{ uri: "https://stepcar.com.br" }} onMessage={handleOnMessage} />
       <DeviceModal
         cupomData={cupomData}
