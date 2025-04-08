@@ -54,7 +54,6 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = ({ item, connectToDevi
     } finally {
       setConnecting(false)
     }
-    // closeModal()
   }, [closeModal, connectToDevice, item.item])
 
   return (
@@ -142,11 +141,12 @@ const DeviceModal: FC<DeviceModalProps> = ({
           </Text>
         )}
         <FlatList
-          style={{ flex: 1 }} // Add this line
+          style={{ flex: 1 }}
           contentContainerStyle={modalStyle.modalFlatlistContiner}
           data={devices}
           renderItem={renderDeviceModalListItem}
           keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={true}
         />
         {connectedDevice?.isConnected ? (
           <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
