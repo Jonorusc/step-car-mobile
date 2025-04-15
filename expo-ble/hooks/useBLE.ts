@@ -99,7 +99,6 @@ function useBLE(): BLEPrinterHook {
           const characteristics = await service.characteristics()
 
           for (const characteristic of characteristics) {
-            console.log(`Found characteristic: ${characteristic.uuid}`)
             if (characteristic.isWritableWithResponse || characteristic.isWritableWithoutResponse) {
               writableCharacteristic = characteristic
             }
@@ -151,7 +150,35 @@ function useBLE(): BLEPrinterHook {
 
       if (device) {
         const _devices = useBLEStore.getState().devices
-        if (!isDuplicteDevice(_devices, device)) {
+
+        const printerKeywords = [
+          "printer",
+          "bt-printer",
+          "bt_spp",
+          "zebra",
+          "epson",
+          "mpt",
+          "pos",
+          "rpp",
+          "xp",
+          "srp",
+          "rongta",
+          "goojprt",
+          "peripage",
+          "xprinter",
+          "hoin",
+          "prt",
+          "impressora"
+        ]
+
+        const deviceName = `${device.name ?? ""}`.toLowerCase()
+        const localName = `${device.localName ?? ""}`.toLowerCase()
+
+        const isPrinter = printerKeywords.some(keyword =>
+          deviceName.includes(keyword) || localName.includes(keyword)
+        )
+      
+        if (isPrinter && !isDuplicteDevice(_devices, device)) {
           setDevices([..._devices, device])
         }
       }

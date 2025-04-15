@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  View,
 } from "react-native"
 import { Device } from "react-native-ble-plx"
 
@@ -122,52 +123,54 @@ const DeviceModal: FC<DeviceModalProps> = ({
 
   const handlePrint = useCallback(() => {
     if (cupomData) print(cupomData)
-  }, [cupomData])
+  }, [cupomData, connectedDevice])
 
   return (
     <Modal style={modalStyle.modalContainer} animationType="slide" transparent={true} visible={visible}>
       <SafeAreaView style={modalStyle.modalTitle}>
-        <Text style={modalStyle.modalTitleText}>Toque em um dispositivo para conectar</Text>
-        {devices.length === 0 && (
-          <Text
-            style={{
-              textAlign: "center",
-              marginTop: 20,
-              fontSize: 18,
-              fontWeight: "400",
-            }}
-          >
-            Nenhum dispositivo encontrado
-          </Text>
-        )}
-        <FlatList
-          style={{ flex: 1 }}
-          contentContainerStyle={modalStyle.modalFlatlistContiner}
-          data={devices}
-          renderItem={renderDeviceModalListItem}
-          keyExtractor={(item) => item.id.toString()}
-          scrollEnabled={true}
-        />
-        {connectedDevice?.isConnected ? (
-          <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
-            <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={modalStyle.modalTitleText}>Toque em um dispositivo para conectar</Text>
+          {devices.length === 0 && (
+            <Text
+              style={{
+                textAlign: "center",
+                marginTop: 20,
+                fontSize: 18,
+                fontWeight: "400",
+              }}
+            >
+              Nenhum dispositivo encontrado
+            </Text>
+          )}
+          <FlatList
+            style={{ flex: 1, borderWidth: 2, margin: 5 }}
+            contentContainerStyle={modalStyle.modalFlatlistContiner}
+            data={devices}
+            renderItem={renderDeviceModalListItem}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={true}
+          />
+          {connectedDevice?.isConnected ? (
+            <TouchableOpacity style={modalStyle.ctaButton} onPress={handlePrint}>
+              <Text style={modalStyle.ctaButtonText}>Imprimir Cupom</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text
+              style={{
+                textAlign: "center",
+                marginTop: 20,
+                fontSize: 18,
+                fontWeight: "400",
+                marginBottom: 20,
+              }}
+            >
+              Conecte-se a uma impressora
+            </Text>
+          )}
+          <TouchableOpacity style={modalStyle.ctaButtonOutlined} onPress={closeModal}>
+            <Text style={modalStyle.ctaButtonTextOutlined}>Cancelar</Text>
           </TouchableOpacity>
-        ) : (
-          <Text
-            style={{
-              textAlign: "center",
-              marginTop: 20,
-              fontSize: 18,
-              fontWeight: "400",
-              marginBottom: 20,
-            }}
-          >
-            Conecte-se a uma impressora
-          </Text>
-        )}
-        <TouchableOpacity style={modalStyle.ctaButtonOutlined} onPress={closeModal}>
-          <Text style={modalStyle.ctaButtonTextOutlined}>Cancelar</Text>
-        </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </Modal>
   )
@@ -179,8 +182,6 @@ const modalStyle = StyleSheet.create({
     backgroundColor: "#f2f2f2",
   },
   modalFlatlistContiner: {
-    flex: 1,
-    justifyContent: "center",
     paddingVertical: 20,
   },
   modalCellOutline: {
@@ -260,7 +261,7 @@ const modalStyle = StyleSheet.create({
     borderRadius: 8,
   },
   disconnectButton: {
-    backgroundColor: "#ee6565",
+    backgroundColor: "#d92929",
     justifyContent: "center",
     alignItems: "center",
     height: 30,
