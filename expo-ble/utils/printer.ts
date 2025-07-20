@@ -31,7 +31,7 @@ export const printDividerLine = (width: number = 32) => {
   return "".padStart(width, "-") // Creates a line with '-' spanning the specified width
 }
 
-const feedPaper = (lines = 5) => `${ESC}d${String.fromCharCode(lines)}`;
+const feedPaper = (lines = 5) => `${ESC}d${String.fromCharCode(lines)}`
 
 const setQRErrorCorrection = (level: number = 48) => {
   // Level: 48 (L), 49 (M), 50 (Q), 51 (H)
@@ -50,13 +50,10 @@ const printStoredQR = () => {
 }
 
 const formatCNPJ = (cnpj: string) => {
-  cnpj = cnpj.replace(/\D/g, "");
+  cnpj = cnpj.replace(/\D/g, "")
 
-  return cnpj.replace(
-    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-    "$1.$2.$3/$4-$5"
-  );
-};
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
+}
 
 const buildQRCodeCommandFromObject = (data: { username: string; password: string }): string => {
   // Serialize the data object to a JSON string
@@ -164,10 +161,15 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += setAlignment("left")
   cmd += "CNPJ: " + encodeText(formatCNPJ(data?.establishment.document.toString())) + "\n"
   cmd += breakLine(1)
-  cmd += encodeText("Funcionamento de SEGUNDA Á SEXTA das 09:00 às 19:00\n")
+  cmd += encodeText("POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA.\n")
+  cmd += encodeText("SEGUNDA A SABADO DAS 08:00 AS 17:30\n")
+  cmd += encodeText("DOMINGOS E FERIADOS 08:00 AS 12:00\n")
   cmd += encodeText(
-    "Não nos responsabilizamos por quaisquer objetos perdidos ou esquecidos no veículo. Sugerimos que você analise o veículo antes de deixá-lo para lavagem.\n"
+    "CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO\n"
   )
+  cmd += setBold(true)
+  cmd += encodeText("NOTURNA\n")
+  cmd += setBold(false)
   cmd += feedPaper(2)
 
   return cmd
