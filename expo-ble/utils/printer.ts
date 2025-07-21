@@ -84,6 +84,15 @@ const initializePrinter = () => `${ESC}@`
 
 const encodeText = (text: string) => Buffer.from(text, "utf-8")
 
+const formatServiceLine = (name: string, price: string, lineWidth = 32) => {
+  const maxNameLength = lineWidth - price.length - 1
+  if (name.length > maxNameLength) {
+    name = name.slice(0, maxNameLength - 1) + "…"
+  }
+  const spaces = " ".repeat(lineWidth - name.length - price.length)
+  return `${name}${spaces}${price}\n`
+}
+
 export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   let total_price = 0
   let cmd = ""
@@ -108,9 +117,9 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += setBold(false)
   cmd += breakLine(1)
   cmd += setAlignment("left")
-  cmd += `Modelo: ${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}\n`
-  cmd += `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
-  cmd += `Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`
+  cmd += `${formatServiceLine("Modelo", `${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}`)}\n`
+  cmd += `${formatServiceLine("Placa", `${setBold(true)}${encodeText(data.vehicleToCupom.plate)}${setBold(false)}`)}\n`
+  cmd += `${formatServiceLine("Cor", `${setBold(true)}${encodeText(data.vehicleToCupom.color)}${setBold(false)}`)}\n`
   cmd += breakLine(1)
   cmd += printDividerLine()
   cmd += breakLine(1)
@@ -132,12 +141,11 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
       cmd += setBold(false)
 
       // exibe cada serviço
-
       data.collectFormattedServicesToModal
         .filter((service: any) => service.category_id === category.value)
         .forEach((service: any) => {
           total_price += parseFloat(service.price)
-          cmd += `${useCoinsFormatted(service.price)}\n`
+          cmd += formatServiceLine(service.name, useCoinsFormatted(service.price))
         })
     })
     cmd += breakLine(1)
