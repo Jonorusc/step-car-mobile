@@ -199,23 +199,38 @@ function useBLE(): BLEPrinterHook {
     }
   }
 
-  const sendMessageToPrinter = async (characteristic: Characteristic, data: any): Promise<boolean> => {
-    try {
-      const printCommand = await buildPrintMessage(data)
+  const sendLargeMessageToPrinter = async (
+    characteristic: Characteristic,
+    buffer: Buffer,
+    chunkSize: number = 100
+  ): Promise<void> => {
+    const totalChunks = Math.ceil(buffer.length / chunkSize)
 
-      // Convert the command string to base64
-      const messageBuffer = Buffer.from(printCommand, "ascii")
-      const base64Message = messageBuffer.toString("base64")
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = buffer.slice(i * chunkSize, (i + 1) * chunkSize)
+      const base64Chunk = chunk.toString("base64")
 
       if (characteristic.isWritableWithResponse) {
-        await characteristic.writeWithResponse(base64Message)
+        await characteristic.writeWithResponse(base64Chunk)
       } else if (characteristic.isWritableWithoutResponse) {
-        await characteristic.writeWithoutResponse(base64Message)
+        await characteristic.writeWithoutResponse(base64Chunk)
       }
+
+      // Aguarde um pequeno tempo entre os envios (essencial para BLE)
+      await new Promise((res) => setTimeout(res, 1))
+    }
+  }
+
+  const sendMessageToPrinter = async (characteristic: Characteristic, data: any): Promise<boolean> => {
+    try {
+      const printCommandBuffer = await buildPrintMessage(data)
+
+      // Envia em blocos de 100 bytes
+      await sendLargeMessageToPrinter(characteristic, printCommandBuffer, 100)
 
       return true
     } catch (error) {
-      Promise.reject(error)
+      console.error("Erro ao imprimir:", error)
       return false
     }
   }

@@ -13,7 +13,12 @@ export type Establishment = {
   document: string
   nameByCompany: string
   type: string
+  coupon?: Coupon | null
   createdAt: string
   updatedAt: string
   deletedAt: string
+}
+
+export type Coupon = {
+  info?: string | null
 }

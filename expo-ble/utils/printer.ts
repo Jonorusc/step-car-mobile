@@ -93,93 +93,107 @@ const formatServiceLine = (name: string, price: string, lineWidth = 32) => {
   return `${name}${spaces}${price}\n`
 }
 
-export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
+export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   let total_price = 0
-  let cmd = ""
+  let chunks: Buffer[] = []
+
+  const push = (txt: string, encoding: BufferEncoding = "latin1") =>
+    chunks.push(Buffer.from(txt, encoding))
 
   const setCodePageUTF8 = () => `${ESC}t\x10`
+  const cutPaper = () => `${GS}V\x00` // Adiciona corte de papel
 
   // Inicializa a impressora
-  cmd += initializePrinter() + setCodePageUTF8()
-  cmd += breakLine(2)
+  push(initializePrinter() + setCodePageUTF8())
+  push(breakLine(2))
 
   // Nome da empresa (centralizado)
-  cmd += setAlignment("center")
-  cmd += setBold(true)
-  cmd += encodeText(data?.establishment.nameByCompany ?? "") + "\n"
-  cmd += setBold(false)
-  cmd += printDividerLine()
-  cmd += breakLine(1)
+  push(setAlignment("center"))
+  push(setBold(true))
+  push(data?.establishment.nameByCompany ?? "", "utf-8")
+  push("\n")
+  push(setBold(false))
+  push(printDividerLine())
+  push(breakLine(1))
 
   // Seção Registro
-  cmd += setBold(true)
-  cmd += "Registro\n"
-  cmd += setBold(false)
-  cmd += breakLine(1)
-  cmd += setAlignment("left")
-  cmd += `Modelo: ${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}\n`
-  cmd += `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
-  cmd += `Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`
-  cmd += breakLine(1)
-  cmd += printDividerLine()
-  cmd += breakLine(1)
+  push(setBold(true))
+  push("Registro\n")
+  push(setBold(false))
+  push(breakLine(1))
+  push(setAlignment("left"))
+  push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}\n`)
+  push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`)
+  push(`Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`)
+  push(breakLine(1))
+  push(printDividerLine())
+  push(breakLine(1))
 
   if (data.collectCategoriesToModal.length > 0) {
-    // Seção Serviços
-    cmd += setAlignment("center")
-    cmd += setBold(true)
-    cmd += "Serviços\n"
-    cmd += setBold(false)
-    cmd += breakLine(1)
+    push(setAlignment("center"))
+    push(setBold(true))
+    push("Serviços\n")
+    push(setBold(false))
+    push(breakLine(1))
 
-    // Lista de serviços
-    cmd += setAlignment("left")
-    data.collectCategoriesToModal.forEach((category: any, key: number) => {
-      // Tipo de serviço
-      cmd += setBold(true)
-      cmd += category.label + "\n"
-      cmd += setBold(false)
+    push(setAlignment("left"))
+    data.collectCategoriesToModal.forEach((category: any) => {
+      push(setBold(true))
+      push(category.label + "\n")
+      push(setBold(false))
 
-      // exibe cada serviço
       data.collectFormattedServicesToModal
         .filter((service: any) => service.category_id === category.value)
         .forEach((service: any) => {
           total_price += parseFloat(service.price)
-          cmd += formatServiceLine(service.name, useCoinsFormatted(service.price))
+          push(formatServiceLine(service.name, useCoinsFormatted(service.price)))
         })
     })
-    cmd += breakLine(1)
-    cmd += printDividerLine()
+
+    push(breakLine(1))
+    push(printDividerLine())
   }
 
-  cmd += setAlignment("center")
-  // Seção Valor
-  cmd += setBold(true)
-  cmd += "Valor\n"
-  cmd += setBold(false)
-  cmd += printDividerLine()
-  cmd += breakLine(1)
+  push(setAlignment("center"))
+  push(setBold(true))
+  push("Valor\n")
+  push(setBold(false))
+  push(printDividerLine())
+  push(breakLine(1))
 
-  cmd += setTextSize(2, 2) // Fonte grande
-  cmd += `${useCoinsFormatted(total_price)}\n`
-  cmd += setTextSize(1, 1) // Reset tamanho da fonte
-  cmd += breakLine(1)
+  push(setTextSize(2, 2))
+  push(`${useCoinsFormatted(total_price)}\n`)
+  push(setTextSize(1, 1))
+  push(breakLine(1))
 
-  // Informações adicionais
-  cmd += setAlignment("left")
-  cmd += "CNPJ: " + encodeText(formatCNPJ(data?.establishment.document.toString())) + "\n"
-  cmd += breakLine(1)
-  cmd += encodeText("POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA.\n")
-  cmd += encodeText("SEGUNDA A SABADO DAS 08:00 AS 17:30\n")
-  cmd += encodeText("DOMINGOS E FERIADOS 08:00 AS 12:00\n")
-  cmd += encodeText(
-    "CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO\n"
-  )
-  cmd += setBold(true)
-  cmd += encodeText("NOTURNA\n")
-  cmd += setBold(false)
-  cmd += breakLine(1)
-  cmd += feedPaper(2)
+  // Info adicional
+  push(setAlignment("left"))
+  push("CNPJ: " + formatCNPJ(data?.establishment.document.toString()) + "\n")
+  push(breakLine(1))
 
-  return cmd
+  // push("POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA.\n")
+  // push("SEGUNDA A SABADO DAS 08:00 AS 17:30\n")
+  // push("DOMINGOS E FERIADOS 08:00 AS 12:00\n")
+  // push("CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO\n")
+  // push(setBold(true))
+  // push("NOTURNA\n")
+  // push(setBold(false))
+
+  let description = 'POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA. SEGUNDA A SABADO DAS 08:00 AS 17:30 DOMINGOS E FERIADOS 08:00 AS 12:00 CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO NOTURNA';
+
+  if (data?.establishment?.coupon?.info) {
+    description = data.establishment.coupon?.info
+  }
+
+  const lengthMax = 32
+  const partsText = description.match(new RegExp(`.{1,${lengthMax}}`, 'g'))
+
+  partsText?.forEach((value, index) => {
+    push(String(`${value}\n`).trim())
+  })
+
+  push(feedPaper(3)) // Aumenta o avanço de papel
+  push(cutPaper()) // Adiciona corte
+
+  return Buffer.concat(chunks)
 }
