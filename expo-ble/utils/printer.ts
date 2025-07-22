@@ -117,9 +117,9 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += setBold(false)
   cmd += breakLine(1)
   cmd += setAlignment("left")
-  cmd += `${formatServiceLine("Modelo", `${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}`)}\n`
-  cmd += `${formatServiceLine("Placa", `${setBold(true)}${encodeText(data.vehicleToCupom.plate)}${setBold(false)}`)}\n`
-  cmd += `${formatServiceLine("Cor", `${setBold(true)}${encodeText(data.vehicleToCupom.color)}${setBold(false)}`)}\n`
+  cmd += `Modelo: ${setBold(true)}${encodeText(data.vehicleToCupom.model)}${setBold(false)}\n`
+  cmd += `Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`
+  cmd += `Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`
   cmd += breakLine(1)
   cmd += printDividerLine()
   cmd += breakLine(1)
@@ -178,6 +178,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<string> => {
   cmd += setBold(true)
   cmd += encodeText("NOTURNA\n")
   cmd += setBold(false)
+  cmd += breakLine(1)
   cmd += feedPaper(2)
 
   return cmd
