@@ -122,7 +122,10 @@ const DeviceModal: FC<DeviceModalProps> = ({
   )
 
   const handlePrint = useCallback(() => {
-    if (cupomData) print(cupomData)
+    if (cupomData) {
+      print(cupomData)
+      closeModal()
+    }
   }, [cupomData, connectedDevice])
 
   return (
