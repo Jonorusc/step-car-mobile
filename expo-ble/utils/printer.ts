@@ -95,10 +95,13 @@ const formatServiceLine = (name: string, price: string, lineWidth = 32) => {
 
 export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   let total_price = 0
+  const discount = data.discount || data.vehicleToCupom.discount || 0
+  if (discount > 0) {
+    total_price -= discount
+  }
   let chunks: Buffer[] = []
 
-  const push = (txt: string, encoding: BufferEncoding = "latin1") =>
-    chunks.push(Buffer.from(txt, encoding))
+  const push = (txt: string, encoding: BufferEncoding = "latin1") => chunks.push(Buffer.from(txt, encoding))
 
   const setCodePageUTF8 = () => `${ESC}t\x10`
   const cutPaper = () => `${GS}V\x00` // Adiciona corte de papel
@@ -162,7 +165,8 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   push(breakLine(1))
 
   push(setTextSize(2, 2))
-  push(`${useCoinsFormatted(total_price)}\n`)
+  if (discount > 0) push(`Desconto aplicado: ${useCoinsFormatted(discount)}\n`)
+  push(`${useCoinsFormatted(total_price - discount)}\n`)
   push(setTextSize(1, 1))
   push(breakLine(1))
 
@@ -179,14 +183,15 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   // push("NOTURNA\n")
   // push(setBold(false))
 
-  let description = 'POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA. SEGUNDA A SABADO DAS 08:00 AS 17:30 DOMINGOS E FERIADOS 08:00 AS 12:00 CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO NOTURNA';
+  let description =
+    "POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA. SEGUNDA A SABADO DAS 08:00 AS 17:30 DOMINGOS E FERIADOS 08:00 AS 12:00 CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO NOTURNA"
 
   if (data?.establishment?.coupon?.info) {
     description = data.establishment.coupon?.info
   }
 
   const lengthMax = 32
-  const partsText = description.match(new RegExp(`.{1,${lengthMax}}`, 'g'))
+  const partsText = description.match(new RegExp(`.{1,${lengthMax}}`, "g"))
 
   partsText?.forEach((value, index) => {
     push(String(`${value}\n`).trim())

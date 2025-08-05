@@ -3,6 +3,7 @@ export interface CUPOM {
   collectCategoriesToModal: any
   collectFormattedServicesToModal: any
   establishment: Establishment
+  discount: number
 }
 
 export type Establishment = {
