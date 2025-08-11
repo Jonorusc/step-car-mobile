@@ -15,6 +15,7 @@ export type Establishment = {
   nameByCompany: string
   type: string
   coupon?: Coupon | null
+  created_at_formatted: string
   createdAt: string
   updatedAt: string
   deletedAt: string

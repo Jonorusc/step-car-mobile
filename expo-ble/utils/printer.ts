@@ -84,13 +84,13 @@ const initializePrinter = () => `${ESC}@`
 
 const encodeText = (text: string) => Buffer.from(text, "utf-8")
 
-const formatServiceLine = (name: string, price: string, lineWidth = 32) => {
+const formatServiceLine = (name: string, price: string, lineWidth = 32, isDiscount = false) => {
   const maxNameLength = lineWidth - price.length - 1
   if (name.length > maxNameLength) {
     name = name.slice(0, maxNameLength - 1) + "…"
   }
   const spaces = " ".repeat(lineWidth - name.length - price.length)
-  return `${name}${spaces}${price}\n`
+  return `${name}${spaces}${isDiscount ? '-' : ''}${price}\n`
 }
 
 export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
@@ -128,6 +128,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}\n`)
   push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`)
   push(`Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`)
+  push(`Entrada: ${setBold(true)}${data.vehicleToCupom.created_at_formatted}${setBold(false)}\n`)
   push(breakLine(1))
   push(printDividerLine())
   push(breakLine(1))
@@ -154,9 +155,13 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     })
 
     push(breakLine(1))
-    push(printDividerLine())
   }
 
+  if (discount > 0) {
+    push(formatServiceLine('Desconto:', useCoinsFormatted(discount), 31, true))
+  }
+
+  push(printDividerLine())
   push(setAlignment("center"))
   push(setBold(true))
   push("Valor\n")
@@ -165,8 +170,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   push(breakLine(1))
 
   push(setTextSize(2, 2))
-  if (discount > 0) push(`Desconto aplicado: ${useCoinsFormatted(discount)}\n`)
-  push(`${useCoinsFormatted(total_price - discount)}\n`)
+  push(`${useCoinsFormatted(total_price)}\n`)
   push(setTextSize(1, 1))
   push(breakLine(1))
 
