@@ -7,14 +7,14 @@ import * as Sharing from "expo-sharing"
 import { SafeAreaView } from "react-native-safe-area-context"
 import DeviceModal from "@/components/devices-modal"
 import type { CUPOM } from "../types"
-import NetInfo from "@react-native-community/netinfo";
-import AntDesign from '@expo/vector-icons/AntDesign';
+import NetInfo from "@react-native-community/netinfo"
+import AntDesign from "@expo/vector-icons/AntDesign"
 
 function Index() {
   const [cupomData, setCupomData] = useState<CUPOM | null>(null)
   const { scan, requestPermissions, print, connectToDevice, disconnect } = useBLE()
-  const { connectedDevice, devices } = useBLEStore()
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const { connectedDevice, devices, connectionState } = useBLEStore()
+  const [isConnected, setIsConnected] = useState<boolean | null>(null)
 
   const handleDownloadPDF = async (data: string, fileName: string) => {
     try {
@@ -50,6 +50,11 @@ function Index() {
 
     const cupomData = JSON.parse(data) as CUPOM
     setCupomData(cupomData)
+
+    if (connectionState === "connected") {
+      print(cupomData)
+      return
+    }
     openModal()
   }
 
@@ -74,28 +79,28 @@ function Index() {
   }
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state?.isConnected);
-    });
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state?.isConnected)
+    })
 
-    NetInfo.fetch().then(state => {
-      setIsConnected(state?.isConnected);
-    });
+    NetInfo.fetch().then((state) => {
+      setIsConnected(state?.isConnected)
+    })
 
-    return () => unsubscribe();
-  }, []);
+    return () => unsubscribe()
+  }, [])
 
   if (isConnected === null) {
-    return <ActivityIndicator size="large" />;
+    return <ActivityIndicator size="large" />
   }
 
   if (!isConnected) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <AntDesign name="disconnect" size={80} color="#0072a3" />
-        <Text style={{fontSize: 15}}>Sem conexão com a internet</Text>
+        <Text style={{ fontSize: 15 }}>Sem conexão com a internet</Text>
       </View>
-    );
+    )
   }
 
   return (

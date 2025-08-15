@@ -17,7 +17,7 @@ import { Device } from "react-native-ble-plx"
 
 type DeviceModalListItemProps = {
   item: ListRenderItemInfo<Device>
-  connectToDevice: (device: Device) => Promise<boolean>
+  connectToDevice: (device: Device) => Promise<{ success: boolean; cleanup?: () => void }>
   closeModal: () => void
   connectedDevice: Device | null
   disconnect: () => Promise<void>
@@ -29,7 +29,7 @@ type DeviceModalProps = {
   closeModal: () => void
   disconnect: () => Promise<void>
   devices: Device[]
-  connectToDevice: (device: Device) => Promise<boolean>
+  connectToDevice: (device: Device) => Promise<{ success: boolean; cleanup?: () => void }>
   connectedDevice: Device | null
   print: (data: CUPOM) => void
 }
@@ -46,7 +46,7 @@ const DeviceModalListItem: FC<DeviceModalListItemProps> = ({ item, connectToDevi
     try {
       setConnecting(true)
       const connected = await connectToDevice(item.item)
-      if (!connected) {
+      if (!connected.success) {
         const identifier = item.item.name ?? item.item.id
         Alert.alert("Stepcar", "Não foi possível conectar ao dispositivo " + identifier)
       }

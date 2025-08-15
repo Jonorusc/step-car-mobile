@@ -2,17 +2,23 @@
 import { Buffer } from "buffer"
 import { CUPOM } from "@/types"
 import { create } from "zustand"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { buildPrintMessage } from "@/utils/printer"
 import { Alert, Platform, PermissionsAndroid } from "react-native"
 import { BleManager, Characteristic, Device } from "react-native-ble-plx"
 import { PERMISSIONS, requestMultiple, RESULTS } from "react-native-permissions"
+
+export type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting"
 
 export const useBLEStore = create<{
   bleManager: BleManager
   devices: Device[]
   connectedDevice: Device | null
   characteristic: Characteristic | null
+  isConnecting: boolean
+  connectionState: ConnectionState
+  setConnectionState: (state: "disconnected" | "connecting" | "connected" | "reconnecting") => void
+  setIsConnecting: (isConnecting: boolean) => void
   setDevices: (devices: Device[]) => void
   setConnectedDevice: (connectedDevice: Device | null) => void
   setCharacteristic: (characteristic: Characteristic | null) => void
@@ -21,6 +27,10 @@ export const useBLEStore = create<{
   devices: [],
   connectedDevice: null,
   characteristic: null,
+  isConnecting: false,
+  connectionState: "disconnected",
+  setConnectionState: (connectionState) => set({ connectionState }),
+  setIsConnecting: (isConnecting: boolean) => set({ isConnecting }),
   setDevices: (devices: Device[]) => set({ devices }),
   setConnectedDevice: (connectedDevice: Device | null) => set({ connectedDevice }),
   setCharacteristic: (characteristic: Characteristic | null) => set({ characteristic }),
@@ -30,17 +40,83 @@ interface BLEPrinterHook {
   devices: Device[]
   scan: () => void
   stopScan: () => void
-  connectToDevice: (device: Device) => Promise<boolean>
+  connectToDevice: (device: Device) => Promise<{ success: boolean; cleanup?: () => void }>
   disconnect: () => Promise<void>
   print: (data: CUPOM) => Promise<void>
   isConnected: boolean
   ConnectedDevice: Device | null
   requestPermissions: () => Promise<boolean>
+  connectionState: ConnectionState
 }
 
 function useBLE(): BLEPrinterHook {
-  const { devices, connectedDevice, characteristic, setDevices, setConnectedDevice, setCharacteristic, bleManager } =
-    useBLEStore()
+  const {
+    devices,
+    connectedDevice,
+    characteristic,
+    setDevices,
+    setConnectedDevice,
+    setCharacteristic,
+    bleManager,
+    isConnecting,
+    setIsConnecting,
+    connectionState,
+    setConnectionState,
+  } = useBLEStore()
+
+  useEffect(() => {
+    if (!connectedDevice) return
+
+    const subscription = bleManager.onDeviceDisconnected(connectedDevice.id, (error, device) => {
+      console.log("Device disconnected", error, device)
+      if (error) {
+        console.error("Disconnection error:", error)
+      }
+
+      // Attempt to reconnect if this wasn't a user-initiated disconnect
+      if (!isConnecting && device) {
+        setIsConnecting(true)
+        reconnectToDevice(device).finally(() => setIsConnecting(false))
+      }
+    })
+
+    return () => {
+      subscription.remove()
+    }
+  }, [connectedDevice, isConnecting])
+
+  const reconnectToDevice = async (device: Device) => {
+    try {
+      console.log("Attempting to reconnect...")
+      const maxAttempts = 3
+      let attempts = 0
+
+      while (attempts < maxAttempts) {
+        attempts++
+        try {
+          const { success } = await connectToDevice(device)
+          if (success) {
+            console.log("Reconnected successfully!")
+            return
+          }
+        } catch (error) {
+          console.error(`Reconnection attempt ${attempts} failed:`, error)
+        }
+
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempts))
+      }
+
+      // If we get here, all attempts failed
+      Alert.alert("Erro", "Não foi possível reconectar à impressora")
+      setConnectedDevice(null)
+      setCharacteristic(null)
+    } catch (error) {
+      console.error("Reconnection error:", error)
+      setConnectedDevice(null)
+      setCharacteristic(null)
+    }
+  }
 
   const requestPermissions = async () => {
     if (Platform.OS === "ios") {
@@ -81,48 +157,73 @@ function useBLE(): BLEPrinterHook {
     return false
   }
 
+  const startKeepAlive = useCallback((characteristic: Characteristic) => {
+    if (Platform.OS === "ios") {
+      // iOS typically manages connection persistence well (so we dont need to do anything)
+      return () => {}
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const keepAliveCommand = Buffer.from([0x1b, 0x40]).toString("base64")
+        if (characteristic.isWritableWithoutResponse) {
+          await characteristic.writeWithoutResponse(keepAliveCommand)
+        }
+      } catch (error) {
+        console.error("Keep-alive failed:", error)
+      }
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   const connectToDevice = useCallback(
     async (device: Device) => {
       try {
-        console.log(`Attempting to connect to device: ${device.name} (${device.id})`)
+        setConnectionState("connecting")
+        setIsConnecting(true)
 
+        console.log(`Attempting to connect to device: ${device.name} (${device.id})`)
         const connected = await bleManager.connectToDevice(device.id)
         await connected.discoverAllServicesAndCharacteristics()
 
         console.log(`Connected to ${device.name}, discovering services...`)
-
         const services = await connected.services()
 
         let writableCharacteristic: Characteristic | null = null
-
         for (const service of services) {
           const characteristics = await service.characteristics()
-
           for (const characteristic of characteristics) {
             if (characteristic.isWritableWithResponse || characteristic.isWritableWithoutResponse) {
               writableCharacteristic = characteristic
+              break
             }
           }
+          if (writableCharacteristic) break
         }
 
         if (!writableCharacteristic) {
           Alert.alert("Erro", "O dispositivo conectado não é uma impressora")
-          return false
+          return { success: false }
         }
 
+        const cleanup = startKeepAlive(writableCharacteristic)
         setCharacteristic(writableCharacteristic)
         setConnectedDevice(connected)
+        setConnectionState("connected")
 
         console.log("Connected successfully!")
-
-        return true
+        return { success: true, cleanup }
       } catch (error) {
         console.error("Failed to connect:", error)
+        setConnectionState("disconnected")
         Alert.alert("Erro", "Não foi possível conectar ao dispositivo")
-        return false
+        return { success: false }
+      } finally {
+        setIsConnecting(false)
       }
     },
-    [bleManager, setConnectedDevice, setCharacteristic]
+    [bleManager, setConnectedDevice, setCharacteristic, startKeepAlive, setIsConnecting, setConnectionState]
   )
 
   const isDuplicteDevice = (devices: Device[], nextDevice: Device) =>
@@ -168,16 +269,14 @@ function useBLE(): BLEPrinterHook {
           "xprinter",
           "hoin",
           "prt",
-          "impressora"
+          "impressora",
         ]
 
         const deviceName = `${device.name ?? ""}`.toLowerCase()
         const localName = `${device.localName ?? ""}`.toLowerCase()
 
-        const isPrinter = printerKeywords.some(keyword =>
-          deviceName.includes(keyword) || localName.includes(keyword)
-        )
-      
+        const isPrinter = printerKeywords.some((keyword) => deviceName.includes(keyword) || localName.includes(keyword))
+
         if (isPrinter && !isDuplicteDevice(_devices, device)) {
           setDevices([..._devices, device])
         }
@@ -187,11 +286,18 @@ function useBLE(): BLEPrinterHook {
 
   const disconnect = useCallback(async () => {
     if (connectedDevice) {
-      await bleManager.cancelDeviceConnection(connectedDevice.id)
-      setConnectedDevice(null)
-      setCharacteristic(null)
+      try {
+        setIsConnecting(true)
+        await bleManager.cancelDeviceConnection(connectedDevice.id)
+      } catch (error) {
+        console.error("Error during disconnect:", error)
+      } finally {
+        setConnectedDevice(null)
+        setCharacteristic(null)
+        setIsConnecting(false)
+      }
     }
-  }, [bleManager, connectedDevice])
+  }, [bleManager, connectedDevice, setIsConnecting])
 
   const print = async (data: CUPOM) => {
     if (connectedDevice && characteristic) {
@@ -245,6 +351,7 @@ function useBLE(): BLEPrinterHook {
     ConnectedDevice: connectedDevice,
     print,
     requestPermissions,
+    connectionState
   }
 }
 
