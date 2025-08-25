@@ -16,9 +16,11 @@ export const useBLEStore = create<{
   connectedDevice: Device | null
   characteristic: Characteristic | null
   isConnecting: boolean
+  bluetoothState: string
   connectionState: ConnectionState
   setConnectionState: (state: "disconnected" | "connecting" | "connected" | "reconnecting") => void
   setIsConnecting: (isConnecting: boolean) => void
+  setBluetoothState: (bluetoothState: string) => void
   setDevices: (devices: Device[]) => void
   setConnectedDevice: (connectedDevice: Device | null) => void
   setCharacteristic: (characteristic: Characteristic | null) => void
@@ -29,8 +31,10 @@ export const useBLEStore = create<{
   characteristic: null,
   isConnecting: false,
   connectionState: "disconnected",
+  bluetoothState: "Unknown",
   setConnectionState: (connectionState) => set({ connectionState }),
   setIsConnecting: (isConnecting: boolean) => set({ isConnecting }),
+  setBluetoothState: (bluetoothState: string) => set({ bluetoothState }),
   setDevices: (devices: Device[]) => set({ devices }),
   setConnectedDevice: (connectedDevice: Device | null) => set({ connectedDevice }),
   setCharacteristic: (characteristic: Characteristic | null) => set({ characteristic }),
@@ -61,8 +65,35 @@ function useBLE(): BLEPrinterHook {
     isConnecting,
     setIsConnecting,
     connectionState,
+    bluetoothState,
+    setBluetoothState,
     setConnectionState,
   } = useBLEStore()
+
+  // Monitor Bluetooth state changes
+  useEffect(() => {
+    const subscription = bleManager.onStateChange((state) => {
+      console.log("Bluetooth state changed:", state)
+      setBluetoothState(state)
+
+      // Handle Bluetooth being turned off
+      if (state === "PoweredOff" && connectedDevice) {
+        console.log("Bluetooth turned off, disconnecting...")
+        setConnectedDevice(null)
+        setCharacteristic(null)
+        Alert.alert("Bluetooth Desligado", "A conexão com a impressora foi perdida porque o Bluetooth foi desligado.")
+      }
+
+      // Handle Bluetooth being turned on
+      if (state === "PoweredOn") {
+        console.log("Bluetooth turned on")
+      }
+    }, true)
+
+    return () => {
+      subscription.remove()
+    }
+  }, [bleManager, connectedDevice, setBluetoothState, setConnectedDevice, setCharacteristic])
 
   useEffect(() => {
     if (!connectedDevice) return
@@ -78,6 +109,17 @@ function useBLE(): BLEPrinterHook {
         setIsConnecting(true)
         reconnectToDevice(device).finally(() => setIsConnecting(false))
       }
+
+      // // Only handle this if we're not currently trying to disconnect
+      // if (!isConnecting) {
+      //   setConnectedDevice(null)
+      //   setCharacteristic(null)
+
+      //   if (error) {
+      //     console.error("Disconnection error:", error)
+      //     Alert.alert("Conexão Perdida", `A conexão com ${device?.name || "a impressora"} foi perdida.`)
+      //   }
+      // }
     })
 
     return () => {
@@ -351,7 +393,7 @@ function useBLE(): BLEPrinterHook {
     ConnectedDevice: connectedDevice,
     print,
     requestPermissions,
-    connectionState
+    connectionState,
   }
 }
 
