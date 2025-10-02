@@ -7,7 +7,6 @@ import { Alert, Animated, Platform, Text, TouchableOpacity } from "react-native"
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from "react-native";
 import WebView from "react-native-webview";
-import RNFS from "react-native-fs";
 import SuccessModal from "@/components/SuccessModal";
 
 const Main = () => {
@@ -15,6 +14,7 @@ const Main = () => {
     const [cupomData, setCupomData] = useState<CUPOM | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [dataShared, setDataShared] = useState<any>(null);
     
     /** Hooks */
     const {
@@ -65,8 +65,11 @@ const Main = () => {
         if (response.type === "DOWNLOAD_PDF") {
             const base64 = response.data;
             const fileName = response.fileName;
-
-            handleDownload(base64, fileName)
+            setDataShared({
+                base64: base64,
+                fileName: fileName
+            });
+            setModalVisible(true);
             return;
         }
 
@@ -109,23 +112,6 @@ const Main = () => {
         }
     }
 
-    const handleDownload = async (base64: string, fileName: string) => {
-        try {
-            const base64Data = base64
-
-            const path =
-                Platform.OS === "android"
-                ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-                : `${RNFS.DocumentDirectoryPath}/${fileName}`;
-
-            await RNFS.writeFile(path, base64Data, "base64");
-            setModalVisible(true);
-        } catch (err) {
-            console.error(err);
-            Alert.alert("Erro", "Não foi possível salvar o arquivo.");
-        }
-    };
-
     useEffect(() => {
         requestPermissions();
     }, []);
@@ -160,7 +146,10 @@ const Main = () => {
                     disconnect={disconnect}
                 />
 
-                <SuccessModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+                <SuccessModal 
+                    data={dataShared}
+                    visible={modalVisible} 
+                    onClose={() => setModalVisible(false)} />
             </SafeAreaView>
         </SafeAreaProvider>
     );

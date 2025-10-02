@@ -1,8 +1,45 @@
 import React from "react";
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Modal, View, Text, StyleSheet, Platform, TouchableOpacity } from "react-native";
 import LottieView from "lottie-react-native";
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
 
-const SuccessModal = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+const SuccessModal = ({ data, visible, onClose }: { data: any, visible: boolean; onClose: () => void }) => {
+  async function sharePDF() {
+      try {
+          data
+          let base64Pdf = data.base64;
+          let fileName = data.fileName;
+
+          // Caminho temporário seguro para Android/iOS
+          const path =
+          Platform.OS === 'android'
+              ? `${RNFS.CachesDirectoryPath}/${fileName}`
+              : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+          // Salva o PDF
+          await RNFS.writeFile(path, base64Pdf, 'base64');
+
+          const exists = await RNFS.exists(path);
+          if (!exists) throw new Error('Arquivo não foi criado');
+
+          // O Share.open vai usar file:// no Android
+          await Share.open({
+              title: 'Compartilhar Relatório',
+              url: `file://${path}`,
+              type: 'application/pdf',
+              failOnCancel: false,
+          });
+
+          // Opcional: remove o arquivo após compartilhar
+          // await RNFS.unlink(path);
+
+          onClose();
+      } catch (err) {
+          console.error('Erro ao compartilhar PDF:', err);
+      }
+  }
+
   return (
     <Modal
       animationType="fade"
@@ -21,10 +58,14 @@ const SuccessModal = ({ visible, onClose }: { visible: boolean; onClose: () => v
           />
 
           <Text style={styles.title}>Sucesso!</Text>
-          <Text style={styles.message}>O arquivo foi salvo com sucesso.</Text>
+          <Text style={styles.message}>O arquivo foi gerado com sucesso, compartilhe.</Text>
 
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Fechar</Text>
+          <TouchableOpacity style={styles.button} onPress={sharePDF}>
+            <Text style={styles.buttonText}>Compartilhar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.buttonClosed} onPress={onClose}>
+            <Text style={styles.buttonTextClosed}>Fechar</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -58,13 +99,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    backgroundColor: "#001d29",
+    backgroundColor: "#f97316",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  buttonClosed: {
+    backgroundColor: "#e6e6e6ff",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
   buttonText: {
     color: "#fff",
+    fontWeight: "bold",
+  },
+  buttonTextClosed: {
+    color: "#001d29",
     fontWeight: "bold",
   },
 });
