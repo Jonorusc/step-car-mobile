@@ -27,20 +27,29 @@ export default function RootLayout() {
       // Unauthenticated users belong on login or register (both are in auth group)
       // If they are on a private page or the subscription gate page, send them to login
       if (!inAuthGroup || onSubscriptionPage) {
-        router.replace('/login');
+        const timer = setTimeout(() => {
+          router.replace('/login');
+        }, 1);
+        return () => clearTimeout(timer);
       }
     } else {
       // Authenticated users
       if (!isSubscribed) {
         // Locked: redirect to subscription blocking gate
         if (!onSubscriptionPage) {
-          router.replace('/subscription');
+          const timer = setTimeout(() => {
+            router.replace('/subscription');
+          }, 1);
+          return () => clearTimeout(timer);
         }
       } else {
         // Active Subscribers belong in private sections
         // If they are in the auth group (login, register, subscription), redirect to private index
         if (inAuthGroup) {
-          router.replace('/');
+          const timer = setTimeout(() => {
+            router.replace('/');
+          }, 1);
+          return () => clearTimeout(timer);
         }
       }
     }

@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../hooks/useAuth';
@@ -74,30 +75,46 @@ export default function LoginScreen() {
     }
   };
 
+  const handleRegisterRedirect = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      // Redirect to the web registration page
+      await WebBrowser.openBrowserAsync('https://stepcar.com.br/sign-up');
+    } catch (error) {
+      console.error('Failed to open WebBrowser:', error);
+      Alert.alert('Erro', 'Não foi possível abrir a página de cadastro.');
+    }
+  };
+
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        {/* Top Header Section */}
         <View style={styles.headerContainer}>
-          <MaterialIcons name="directions-car" size={64} color="#0284c7" />
-          <Text style={styles.brandTitle}>StepCar</Text>
-          <Text style={styles.brandSubtitle}>Gestão Operacional de Estacionamento</Text>
+          <Image
+            source={require('../../assets/images/splash-icon.png')}
+            style={styles.logoImage}
+          />
+          <Text style={styles.brandTitle}>Bem-vindo de volta</Text>
+          <Text style={styles.brandSubtitle}>Entre na sua conta para continuar</Text>
         </View>
 
+        {/* Form Card Container */}
         <View style={styles.cardContainer}>
-          <Text style={styles.loginTitle}>Acesse sua conta</Text>
+          <Text style={styles.loginCardTitle}>Login</Text>
 
-          {/* Email field */}
+          {/* Email / Username field */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>E-mail ou Registro</Text>
             <View style={[styles.inputWrapper, emailError ? styles.inputErrorBorder : null]}>
-              <MaterialIcons name="email" size={20} color="#94a3b8" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Ex: joao@email.com"
-                placeholderTextColor="#64748b"
+                placeholder="Digite seu e-mail ou registro"
+                placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -112,11 +129,10 @@ export default function LoginScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Senha</Text>
             <View style={[styles.inputWrapper, passwordError ? styles.inputErrorBorder : null]}>
-              <MaterialIcons name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Insira sua senha"
-                placeholderTextColor="#64748b"
+                placeholder="Digite a senha"
+                placeholderTextColor="#94a3b8"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -137,12 +153,7 @@ export default function LoginScreen() {
             {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           </View>
 
-          {/* Forgot password */}
-          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordContainer}>
-            <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
-          </TouchableOpacity>
-
-          {/* Submit button */}
+          {/* Entrar (Submit) button */}
           <TouchableOpacity
             style={styles.loginButton}
             onPress={handleLogin}
@@ -152,18 +163,35 @@ export default function LoginScreen() {
             {isLoading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.loginButtonText}>Entrar</Text>
+              <View style={styles.buttonTextWrapper}>
+                <Text style={styles.loginButtonText}>Entrar</Text>
+                <MaterialIcons name="arrow-forward" size={18} color="#ffffff" style={styles.arrowIcon} />
+              </View>
             )}
           </TouchableOpacity>
+
+          {/* Divider line */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Forgot Password action */}
+          <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordButton} activeOpacity={0.7}>
+            <MaterialIcons name="vpn-key" size={18} color="#475569" style={{ marginRight: 8 }} />
+            <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+          </TouchableOpacity>
+
+          {/* Create Account action */}
+          <TouchableOpacity onPress={handleRegisterRedirect} style={styles.registerOutlineButton} activeOpacity={0.7}>
+            <Text style={styles.registerOutlineButtonText}>Criar conta</Text>
+          </TouchableOpacity>
+
         </View>
 
-        {/* Link to Register */}
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>Não possui uma conta? </Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={styles.registerLink}>Cadastre-se</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Footer Section */}
+        <Text style={styles.footerText}>© 2026 Sistema. Todos os direitos reservados.</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -172,7 +200,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f8fafc',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -181,31 +209,43 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 36,
+    marginBottom: 28,
+    marginTop: 20,
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+    marginBottom: 16,
   },
   brandTitle: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#f8fafc',
-    marginTop: 8,
+    color: '#0f172a',
+    textAlign: 'center',
   },
   brandSubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 4,
+    color: '#64748b',
+    marginTop: 6,
     textAlign: 'center',
   },
   cardContainer: {
-    backgroundColor: 'rgba(30, 41, 59, 0.7)',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  loginTitle: {
-    fontSize: 20,
+  loginCardTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#f8fafc',
+    color: '#1e293b',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -215,28 +255,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#cbd5e1',
+    color: '#475569',
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#cbd5e1',
     paddingHorizontal: 12,
     height: 48,
   },
   inputErrorBorder: {
     borderColor: '#ef4444',
   },
-  inputIcon: {
-    marginRight: 8,
-  },
   input: {
     flex: 1,
-    color: '#f8fafc',
+    color: '#0f172a',
     fontSize: 15,
   },
   eyeBtn: {
@@ -247,44 +284,80 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
   },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: '#0284c7',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   loginButton: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#4f46e5',
     borderRadius: 8,
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0284c7',
+    marginTop: 8,
+    shadowColor: '#4f46e5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 3,
+  },
+  buttonTextWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loginButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
+  arrowIcon: {
+    marginLeft: 6,
   },
-  registerText: {
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2e8f0',
+  },
+  dividerText: {
     color: '#94a3b8',
     fontSize: 14,
+    marginHorizontal: 10,
   },
-  registerLink: {
-    color: '#14b8a6',
-    fontSize: 14,
-    fontWeight: 'bold',
+  forgotPasswordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    marginBottom: 12,
+  },
+  forgotPasswordText: {
+    color: '#475569',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  registerOutlineButton: {
+    backgroundColor: '#ffffff',
+    borderColor: '#cbd5e1',
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  registerOutlineButtonText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 32,
+    marginBottom: 16,
   },
 });

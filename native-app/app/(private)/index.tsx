@@ -11,7 +11,7 @@ const Main = () => {
     /** useStates */
     const [cupomData, setCupomData] = useState<CUPOM | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-    
+
     /** Hooks */
     const {
         requestPermissions,
@@ -36,15 +36,15 @@ const Main = () => {
     useEffect(() => {
         if (connectedDevice) {
             Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
             }).start()
         } else {
             Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
             }).start()
         }
     }, [connectedDevice, fadeAnim])
@@ -61,12 +61,12 @@ const Main = () => {
         //     handleDownloadPDF(data, fileName)
         //     return
         // }
-    
+
         const cupomData = JSON.parse(data) as CUPOM
         setCupomData(cupomData)
 
         if (connectionState === "connected" && connectedDevice !== null) {
-            if (! processingPrint) {
+            if (!processingPrint) {
                 print(cupomData)
             }
 
@@ -101,61 +101,38 @@ const Main = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <WebView
-                source={{ uri: "https://stepcar.com.br" }}
-                onMessage={handleMessage}
-                javaScriptEnabled
-                domStorageEnabled
-            />
-
-            <Animated.View style={[styles.floatingButton, { opacity: fadeAnim }]}>
-                <TouchableOpacity style={styles.floatingButtonContent} onPress={handleDisconnect} activeOpacity={0.7}>
-                    <Text style={{ color: "white", fontSize: 6 }}>Desconectar</Text>
-                    <MaterialIcons name="print-disabled" size={24} color="white" />
-                </TouchableOpacity>
-            </Animated.View>
-
-            <Devices
-                cupomData={cupomData}
-                closeModal={handleCloseModal}
-                visible={isModalVisible}
-                connectedDevice={connectedDevice}
-                connectToDevice={connectToDevice}
-                devices={devices}
-                print={print}
-                disconnect={disconnect}
-            />
+            <Text style={{ color: "black", fontSize: 24 }}>Main page</Text>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: "relative",
-  },
-  floatingButton: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    backgroundColor: "#0f1729", // Red color for disconnect action
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  floatingButtonContent: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    container: {
+        flex: 1,
+        position: "relative",
+    },
+    floatingButton: {
+        position: "absolute",
+        right: 16,
+        bottom: 16,
+        backgroundColor: "#0f1729", // Red color for disconnect action
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: "center",
+        alignItems: "center",
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    floatingButtonContent: {
+        width: "100%",
+        height: "100%",
+        justifyContent: "center",
+        alignItems: "center",
+    },
 })
 
 export default Main;
