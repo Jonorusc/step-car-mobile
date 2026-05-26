@@ -21,6 +21,7 @@ tech-stack:
 key-files:
   created: ["app/(auth)/subscription.tsx"]
   modified: ["app/_layout.tsx"]
+  deleted: ["app/index.tsx"]
 
 key-decisions:
   - "Constructed a secure, blocking Subscription Gate checking profile metadata dynamically to prevent unsubscribed operators from accessing authenticated local app segments."
@@ -44,13 +45,14 @@ completed: 2026-05-26
 - **Duration:** 15 min
 - **Started:** 2026-05-26T15:40:00Z
 - **Completed:** 2026-05-26T15:55:00Z
-- **Tasks:** 2
-- **Files modified:** 2
+- **Tasks:** 3
+- **Files modified:** 3
 
 ## Accomplishments
 - Developed a gorgeous blocking `SubscriptionScreen` in `app/(auth)/subscription.tsx` prompting attendants to claim subscriptions on the web app.
 - Configured "Verify Payment" trigger to refetch profile data dynamically in the background via the `/user/auth/me` endpoint.
 - Integrated comprehensive routing redirect guards inside root `app/_layout.tsx` to automatically route users to `/login` or `/subscription` depending on their credentials and subscription status.
+- Deleted conflicting root-level `app/index.tsx` so that route collisions are avoided in Expo Router, letting `/` resolve directly to `app/(private)/index.tsx` under the protection of redirection layout guards.
 
 ## Task Commits
 
