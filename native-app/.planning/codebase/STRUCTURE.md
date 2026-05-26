@@ -8,6 +8,7 @@ last_mapped_commit: none
 **Date:** 2026-05-26
 
 ## Directory Layout
+
 - `app/`: Expo Router application entry point. Contains `_layout.tsx` and `index.tsx`.
 - `components/`: UI components. Currently contains `Devices/` component which renders the modal to select and connect to Bluetooth printers.
 - `hooks/`: Custom React hooks. Specifically `useBLE.ts` for Bluetooth management and Zustand store.
@@ -17,6 +18,7 @@ last_mapped_commit: none
 - `assets/`: App icons and splash screens.
 
 ## Naming Conventions
+
 - React components are PascalCase.
 - Hooks and utility files are camelCase.
 - Types/Interfaces are usually PascalCase, but `CUPOM` is uppercase.
