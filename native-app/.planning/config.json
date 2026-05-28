@@ -24,7 +24,7 @@
         "pr_body_sections": []
     },
     "planning": {
-        "commit_docs": true,
+        "commit_docs": false,
         "search_gitignored": false,
         "sub_repos": []
     },

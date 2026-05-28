@@ -1,6 +1,6 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
-import { useAuthStore } from '../hooks/useAuth';
+import { useAuthStore, isUserSubscribed } from '../hooks/useAuth';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 export default function Index() {
@@ -19,8 +19,7 @@ export default function Index() {
     return <Redirect href="/login" />;
   }
 
-  const isSubscribed = Array.isArray(user?.subscription_active) &&
-    user.subscription_active.some(sub => sub.status === 'active');
+  const isSubscribed = isUserSubscribed(user);
 
   if (!isSubscribed) {
     return <Redirect href="/subscription" />;

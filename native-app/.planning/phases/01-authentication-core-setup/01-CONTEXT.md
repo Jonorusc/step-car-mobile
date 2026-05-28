@@ -17,11 +17,12 @@ This phase establishes the foundational native API client shell and authenticate
 - Setup Axios client using `https://stepcarhomolog.com.br/api/v1` as standard Base URL.
 - Inject `Authorization: Bearer <token>` automatically in all authenticated requests.
 - Handle JWT Token Refresh in Axios Interceptors on 401 Unauthorized errors using `POST /user/auth/refresh`.
+- **Complete Profile Fetching**: Immediately request `POST /user/auth/me` after a successful login or registration to obtain the complete user profile and subscription status before updating global store state and triggering routing redirects.
 
 ### 2. Secure Token Storage
 
 - Store tokens natively via `expo-secure-store`.
-- Maintain active user session context in Zustand `useUserStore`.
+- Maintain active user session context in Zustand `useAuthStore` and expose it via a custom `useUser` helper hook, ensuring that the profile data from `/me` is returned.
 
 ### 3. Forgot Password Redirect
 

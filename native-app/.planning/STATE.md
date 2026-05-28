@@ -2,42 +2,42 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-26)
+See: .planning/PROJECT.md (updated 2026-05-27)
 
-**Core value:** To provide an ultra-fast, premium native registration flow for vehicles and a seamless, bulletproof Bluetooth thermal printing experience that works offline.
-**Current focus:** Phase 1: Authentication & Core Setup
+**Core value:** To provide an ultra-fast, premium native registration flow for vehicles and a seamless, bulletproof Bluetooth thermal printing experience that matches the layout, white design pattern, and operational convenience of the web application.
+**Current focus:** Phase 3: Registro & Vehicles CRUD
 
 ## Current Position
 
-Phase: 1 of 6 (Authentication & Core Setup)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-05-26 — Executed Plan 4 of Phase 1 (Completed all 4 plans of Phase 1: custom Axios client, token refreshes, Zustand store, native Login/Register screens, group routing, web redirects, and blocking subscription gating complete).
+Phase: 3 of 6 (Registro & Vehicles CRUD)
+Plan: 0 of 3 in current phase
+Status: Ready for planning
+Last activity: 2026-05-27 — Successfully completed and verified Phase 2 (standalone establishments selection and premium white web-style navigation drawer), bringing all unit and trigger tests to 100% green.
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 16.3 min
-- Total execution time: 1.1 hours
+- Total plans completed: 6
+- Average duration: 15.0 min
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
 | Phase                              | Plans | Total | Avg/Plan |
 | ---------------------------------- | ----- | ----- | -------- |
 | 1. Authentication & Core Setup     | 4     | 4     | 16.3 min |
-| 2. Establishments & Session        | 0     | 2     | -        |
-| 3. Vehicle Hub & Search            | 0     | 2     | -        |
-| 4. Progressive Registration Wizard | 0     | 3     | -        |
-| 5. Flagship Printing Hub           | 0     | 3     | -        |
-| 6. User Profile & Details          | 0     | 1     | -        |
+| 2. Standalone Selection & Drawer   | 2     | 2     | 12.0 min |
+| 3. Registro & Vehicles CRUD        | 0     | 3     | -        |
+| 4. Categories CRUD Module          | 0     | 2     | -        |
+| 5. Services CRUD Module            | 0     | 2     | -        |
+| 6. Companies CRUD Module           | 0     | 2     | -        |
 
 **Recent Trend:**
 
-- Last 5 plans: [25min, 20min, 5min, 15min]
+- Last 5 plans: [20min, 5min, 15min, 12min, 12min]
 - Trend: Stable
 
 _Updated after each plan completion_

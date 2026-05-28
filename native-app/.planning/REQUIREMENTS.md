@@ -17,66 +17,60 @@
 - [ ] **AUTH-06**: Session persistency survives app termination and device restarts.
 - [ ] **AUTH-07**: Blocking Subscription Gate routes unsubscribed authenticated users to the website to subscribe, allowing dynamic check-payment re-verifications.
 
-### Establishment Selection
+#### Establishment Selection & Standalone Flow
 
-- [ ] **ESTB-01**: User can view a listing of their associated establishments using `GET /user/establishment/list-establishment-user`.
-- [ ] **ESTB-02**: User can switch active establishment through a premium switcher interface.
-- [ ] **ESTB-03**: Selected establishment ID is persisted in local device memory.
-- [ ] **ESTB-04**: App displays a clear empty state if the user has no associated establishments.
+- [ ] **ESTB-01**: Standalone selection screen `/establishments` shown on startup if no active establishment is selected, listing all associated user establishments using `GET /user/establishment/list-establishment-user`.
+- [ ] **ESTB-02**: Selecting an establishment saves its `id` securely in local storage (`active_establishment_id`) and redirects the user immediately to the main dashboard.
+- [ ] **ESTB-03**: App displays a clear empty state with instructions and a logout button if 0 establishments are linked.
 
-### Vehicle Management
+### Web-Style Navigation Drawer
 
-- [ ] **VEHC-01**: User can view a paginated list of vehicles in the current establishment using `GET /user/vehicle/list?establishmentId=...`.
-- [ ] **VEHC-02**: User can search vehicles by model, plate, or color.
-- [ ] **VEHC-03**: User can filter the vehicle list by date range or price.
-- [ ] **VEHC-04**: App implements standard pull-to-refresh and high-performance infinite scroll pagination.
-- [ ] **VEHC-05**: User can view complete details of a selected vehicle (including services performed, dates, and discounts).
+- [ ] **NAV-01**: Sliding left-side navigation drawer styled with a premium white background (`#ffffff`), right border, and clean text colors.
+- [ ] **NAV-02**: Profile header card at the top displaying operator name and profile info wrapper.
+- [ ] **NAV-03**: Vertical menu representing the modules, highlighting the active module with a dark rounded card (`#0f172a` background and white text/icon).
+- [ ] **NAV-04**: Menu features dedicated "Estabelecimentos" (redirects back to selection `/establishments`) and "Sair" (logout) triggers at the bottom.
 
-### Progressive Vehicle Registration Wizard
+### Vehicles & Registro (CRUD)
 
-- [ ] **REGW-01**: 5-Step Progressive wizard structure: Basic Data → Category → Services → Details → Summary.
-- [ ] **REGW-02**: Wizard fetches categories using `GET /user/category/list?establishmentId=...` and displays interactive category cards with visual icons.
-- [ ] **REGW-03**: Wizard displays services progressive selection filtered by active categories using `GET /user/service/list?establishmentId=...&categoryIds=...`.
-- [ ] **REGW-04**: User can input custom discount (in BRL/centavos), company identification, and metadata.
-- [ ] **REGW-05**: User registers the vehicle via `POST /user/vehicle/create` and sees an elegant summary card.
-- [ ] **REGW-06**: High-fidelity haptic feedback transitions upon step completion and registration success.
+- [ ] **VEHC-01**: Primary dashboard screen ("Registro") with a "NOVO REGISTRO" teal button, recently added vehicles table, and instant coupon printing on completion.
+- [ ] **VEHC-02**: Attendant can list vehicles in the active establishment using `GET /user/vehicle/list?establishmentId=...`.
+- [ ] **VEHC-03**: Attendant can delete vehicles using `DELETE /user/vehicle/delete/{id}`.
+- [ ] **VEHC-04**: Attendant can create a vehicle wash registration via `POST /user/vehicle/create` including basic details (plate, model, color), price, custom discount, and selected services.
+- [ ] **VEHC-05**: Attendant can attach a company ID (`companyId`) associated with the registration from a list.
+- [ ] **VEHC-06**: Automatic thermal coupon printing via BLE immediately upon successful vehicle registration.
 
-### Profile & Settings
+### Categories Module (CRUD)
 
-- [ ] **PROF-01**: App displays logged-in user profile details using `POST /user/auth/me`.
-- [ ] **PROF-02**: App visualizes active subscription plans, payment statuses (`active`/`inactive`), and expiration dates.
-- [ ] **PROF-03**: User can view their list of registered addresses.
-- [ ] **PROF-04**: App recognizes employee access limits and blocks or displays appropriate access states.
+- [ ] **CAT-01**: Attendant can list categories using `GET /user/category/list?establishmentId=...`.
+- [ ] **CAT-02**: Attendant can create a new category using `POST /user/category/create`.
+- [ ] **CAT-03**: Attendant can update existing categories using `PUT /user/category/update`.
+- [ ] **CAT-04**: Attendant can delete categories using `DELETE /user/category/delete/{id}`.
 
-### Flagship Bluetooth Printing Hub
+### Services Module (CRUD)
 
-- [ ] **PRNT-01**: User has access to a dedicated "Printing Hub" dashboard within the primary navigation.
-- [ ] **PRNT-02**: Scanning view features an immersive radar scanning animation showing live discovered BLE printers.
-- [ ] **PRNT-03**: App automatically detects previously paired devices and handles seamless background auto-connection.
-- [ ] **PRNT-04**: User can review beautiful, interactive receipt previews with custom layout configurations (58mm vs 80mm).
-- [ ] **PRNT-05**: User can reprint past receipts from a "Recent Printed Jobs" archive, cached in local device storage.
-- [ ] **PRNT-06**: Printing Hub displays real-time connection diagnostics (RSSI signal indicators, printer health, connection quality).
-- [ ] **PRNT-07**: Robust print queue system that processes receipts asynchronously and supports retries on printer disconnections.
+- [ ] **SVC-01**: Attendant can list services using `GET /user/service/list?establishmentId=...`.
+- [ ] **SVC-02**: Attendant can create new services using `POST /user/service/create`.
+- [ ] **SVC-03**: Attendant can update existing services using `PUT /user/service/update`.
+- [ ] **SVC-04**: Attendant can delete services using `DELETE /user/service/delete/{id}`.
 
----
+### Companies Module (CRUD)
 
-## v2 Requirements
-
-### Advanced Features & Diagnostics
-
-- **OFFL-01**: Offline Mode - User can save vehicle registration payloads in local device queue while disconnected and synchronize automatically once internet returns.
-- **PRNT-08**: Dynamic receipt layout customization (e.g., custom logo image upload, personalized header message, custom margin configuration).
-- **ANLT-01**: Offline analytics event queuing and batch-dispatching when system reconnects.
+- [ ] **COM-01**: Attendant can list companies using `GET /user/company/list`.
+- [ ] **COM-02**: Attendant can create a new company using `POST /user/company/create`.
+- [ ] **COM-03**: Attendant can update existing companies using `PUT /user/company/update`.
+- [ ] **COM-04**: Attendant can delete companies using `DELETE /user/company/delete/{id}`.
 
 ---
 
 ## Out of Scope
 
-| Feature                       | Reason                                                                                                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| In-App Password Recovery      | Deferred to website browser redirect to preserve web-based token validation mechanisms.                                                                |
-| Category & Service Management | Administrative tools (creating new service items, editing base prices) remain on the web dashboard to keep the mobile experience lean and operational. |
-| In-App Subscription Payment   | Payments are handled on the desktop/mobile website to avoid app store commission overhead.                                                             |
+| Feature                       | Reason                                                                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| In-App Password Recovery      | Redirected to the web portal.                                                                                          |
+| Complex Financial Analytics   | Deferred to the main administrative web dashboard.                                                                     |
+| In-App Profile Management     | Handled completely on the web dashboard.                                                                               |
+| In-App Subscription Mgmt      | Handled completely on the web dashboard.                                                                               |
+| In-App Configs / Settings     | Handled completely on the web dashboard.                                                                               |
 
 ---
 
@@ -84,46 +78,33 @@
 
 | Requirement | Phase                                    | Status  |
 | ----------- | ---------------------------------------- | ------- |
-| AUTH-01     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-02     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-03     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-04     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-05     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-06     | Phase 1: Authentication & Core Setup     | Pending |
-| AUTH-07     | Phase 1: Authentication & Core Setup     | Pending |
-| ESTB-01     | Phase 2: Establishments & Session        | Pending |
-| ESTB-02     | Phase 2: Establishments & Session        | Pending |
-| ESTB-03     | Phase 2: Establishments & Session        | Pending |
-| ESTB-04     | Phase 2: Establishments & Session        | Pending |
-| VEHC-01     | Phase 3: Vehicle Hub & Search            | Pending |
-| VEHC-02     | Phase 3: Vehicle Hub & Search            | Pending |
-| VEHC-03     | Phase 3: Vehicle Hub & Search            | Pending |
-| VEHC-04     | Phase 3: Vehicle Hub & Search            | Pending |
-| VEHC-05     | Phase 3: Vehicle Hub & Search            | Pending |
-| REGW-01     | Phase 4: Progressive Registration Wizard | Pending |
-| REGW-02     | Phase 4: Progressive Registration Wizard | Pending |
-| REGW-03     | Phase 4: Progressive Registration Wizard | Pending |
-| REGW-04     | Phase 4: Progressive Registration Wizard | Pending |
-| REGW-05     | Phase 4: Progressive Registration Wizard | Pending |
-| REGW-06     | Phase 4: Progressive Registration Wizard | Pending |
-| PRNT-01     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-02     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-03     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-04     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-05     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-06     | Phase 5: Flagship Printing Hub           | Pending |
-| PRNT-07     | Phase 5: Flagship Printing Hub           | Pending |
-| PROF-01     | Phase 6: User Profile & Details          | Pending |
-| PROF-02     | Phase 6: User Profile & Details          | Pending |
-| PROF-03     | Phase 6: User Profile & Details          | Pending |
-| PROF-04     | Phase 6: User Profile & Details          | Pending |
-
-**Coverage:**
-
-- v1 requirements: 33 total
-- Mapped to phases: 33
-- Unmapped: 0 ✓
+| AUTH-01     | Phase 1: Authentication & Core Setup     | Complete|
+| ESTB-01     | Phase 2: Standalone Selection & Drawer   | Pending |
+| ESTB-02     | Phase 2: Standalone Selection & Drawer   | Pending |
+| ESTB-03     | Phase 2: Standalone Selection & Drawer   | Pending |
+| NAV-01      | Phase 2: Standalone Selection & Drawer   | Pending |
+| NAV-02      | Phase 2: Standalone Selection & Drawer   | Pending |
+| NAV-03      | Phase 2: Standalone Selection & Drawer   | Pending |
+| NAV-04      | Phase 2: Standalone Selection & Drawer   | Pending |
+| VEHC-01     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| VEHC-02     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| VEHC-03     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| VEHC-04     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| VEHC-05     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| VEHC-06     | Phase 3: Registro & Vehicles CRUD        | Pending |
+| CAT-01      | Phase 4: Categories CRUD Module          | Pending |
+| CAT-02      | Phase 4: Categories CRUD Module          | Pending |
+| CAT-03      | Phase 4: Categories CRUD Module          | Pending |
+| CAT-04      | Phase 4: Categories CRUD Module          | Pending |
+| SVC-01      | Phase 5: Services CRUD Module            | Pending |
+| SVC-02      | Phase 5: Services CRUD Module            | Pending |
+| SVC-03      | Phase 5: Services CRUD Module            | Pending |
+| SVC-04      | Phase 5: Services CRUD Module            | Pending |
+| COM-01      | Phase 6: Companies CRUD Module           | Pending |
+| COM-02      | Phase 6: Companies CRUD Module           | Pending |
+| COM-03      | Phase 6: Companies CRUD Module           | Pending |
+| COM-04      | Phase 6: Companies CRUD Module           | Pending |
 
 ---
 
-_Last updated: 2026-05-26_
+_Last updated: 2026-05-27_

@@ -9,7 +9,7 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import { useAuthStore } from '../../hooks/useAuth';
+import { useAuthStore, isUserSubscribed } from '../../hooks/useAuth';
 import * as WebBrowser from 'expo-web-browser';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
@@ -39,8 +39,7 @@ export default function SubscriptionScreen() {
       await initializeSession();
       
       const updatedState = useAuthStore.getState();
-      const isSubscribed = Array.isArray(updatedState.user?.subscription_active) &&
-        updatedState.user.subscription_active.some(sub => sub.status === 'active');
+      const isSubscribed = isUserSubscribed(updatedState.user);
       
       if (isSubscribed) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

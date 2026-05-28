@@ -2,16 +2,16 @@
 
 ## Overview
 
-This roadmap orchestrates the step-by-step transition of StepCar from a legacy WebView-wrapper mobile app into a fully native-first application. The development is organized into 6 operational phases to ensure structured feature deployment, continuous testing, and absolute stability.
+This roadmap orchestrates the step-by-step transition of StepCar into a fully native-first application modeled directly after the premium Web Dashboard. The development is organized into 6 operational phases to ensure structured feature deployment, continuous testing, and absolute stability.
 
 ## Phases
 
-- [ ] **Phase 1: Authentication & Core Setup** - Initialize API clients, interceptors, secure token storage, and premium native Auth screens.
-- [ ] **Phase 2: Establishments & Session** - Build the establishment listing, native selector switcher, and persist session context.
-- [ ] **Phase 3: Vehicle Hub & Search** - Implement the primary vehicle hub with infinite scroll, searching, advanced filtering, and details page.
-- [ ] **Phase 4: Progressive Registration Wizard** - Redesign the 5-step vehicle registry wizard as a gorgeous native sliding stack with haptics.
-- [ ] **Phase 5: Flagship Printing Hub** - Construct the premium Bluetooth printing scanner, receipt builder, connection diagnostics, and queue.
-- [ ] **Phase 6: User Profile & Details** - Create the beautiful user profile view, listing subscriptions, permissions, and addresses.
+- [x] **Phase 1: Authentication & Core Setup** - Initialize API clients, interceptors, secure token storage, and premium native Auth screens.
+- [x] **Phase 2: Standalone Selection & Drawer** - Build the standalone establishment selector screen and the premium white sliding navigation drawer.
+- [x] **Phase 3: Registro & Vehicles CRUD** - Build the main operational Registro dashboard with CRUD for vehicles, company selector, and BLE receipt printing.
+- [ ] **Phase 4: Categories CRUD Module** - Implement listing, creating, updating, and deleting of service categories.
+- [ ] **Phase 5: Services CRUD Module** - Implement listing, creating, updating, and deleting of services.
+- [ ] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
 
 ---
 
@@ -23,109 +23,108 @@ This roadmap orchestrates the step-by-step transition of StepCar from a legacy W
 **Depends on**: Nothing
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07
 **Success Criteria**:
-
 1. User can natively log in and register, storing credentials securely.
 2. Expired tokens are refreshed silently in the background on API requests.
-3. Forgot Password redirects the user to the main website (stepcar.com.br) securely.
+3. Forgot Password redirects the user to the main website securely.
 4. Unsubscribed authenticated users are blocked natively and directed to the website to subscribe.
-   **Plans**: 4 plans
-   Plans:
 
+**Plans**:
 - [x] 01-01: Setup API client, Axios instance, secure storage, and JWT token refresh interceptor.
 - [x] 01-02: Build native login and native registration UI screens using custom premium inputs.
 - [x] 01-03: Implement forgot password secure web browser redirect directly to stepcar.com.br.
 - [x] 01-04: Build the native Subscription Gating screen and hook up background validation checks.
 
-### Phase 2: Establishments & Session
+### Phase 2: Standalone Selection & Drawer
 
-**Goal**: Build establishment selection and operational session initialization.
+**Goal**: Build a standalone establishment selection screen and a web-dashboard aligned left sliding drawer navigation layout.
 **Depends on**: Phase 1
-**Requirements**: ESTB-01, ESTB-02, ESTB-03, ESTB-04
+**Requirements**: ESTB-01, ESTB-02, ESTB-03, NAV-01, NAV-02, NAV-03, NAV-04
 **Success Criteria**:
+1. User is guided to the standalone `/establishments` selection page if no establishment is active.
+2. Selecting an establishment persists the selection in secure store and routes immediately to the dashboard.
+3. Dashboard features a left-sliding navigation drawer styled with a white background and operator profile header at the top.
+4. Menu highlights the active module with a dark rounded card (`#0f172a`), matching the web design exactly.
+5. Bottom triggers in the drawer successfully go back to `/establishments` or logout the session.
 
-1. Active establishment is loaded automatically and saved inside local storage.
-2. Users with multiple establishments can toggle between establishments smoothly.
-   **Plans**: 2 plans
-   Plans:
+**Plans**:
+- [x] 02-01: Implement standalone `/establishments` selection view and empty state check with manual secure store rehydration.
+- [x] 02-02: Build the left sliding side-drawer component using the premium white web-aligned aesthetic (active module card in `#0f172a` and bottom triggers).
 
-- [ ] 02-01: Connect `GET /user/establishment/list-establishment-user` to React Query and style establishment switcher card.
-- [ ] 02-02: Manage global session context (active establishment) in Zustand and build custom empty states.
+### Phase 3: Registro & Vehicles CRUD
 
-### Phase 3: Vehicle Hub & Search
-
-**Goal**: Implement the primary vehicle activity dashboard, search, and details.
+**Goal**: Implement the primary Registro view, vehicle CRUD, company selection, and auto BLE coupon printing, optimized for native mobile-first layouts.
 **Depends on**: Phase 2
-**Requirements**: VEHC-01, VEHC-02, VEHC-03, VEHC-04, VEHC-05
+**Requirements**: VEHC-01, VEHC-02, VEHC-03, VEHC-04, VEHC-05, VEHC-06
 **Success Criteria**:
+1. Primary operational screen presents the "Registro" dashboard optimized for mobile UX (teal primary "NOVO REGISTRO" button, recently added vehicles styled as card widgets with clear status indicators, and swipe actions).
+2. Attendant can list, register, edit, and delete vehicles in the active establishment.
+3. Vehicle registration includes an optional company selector.
+4. Completing a registration automatically connects to the BLE printer and prints the wash coupon receipt.
 
-1. Attendant can scroll through hundreds of vehicles infinitely with zero latency.
-2. Searching and filters respond in real-time.
-   **Plans**: 2 plans
-   Plans:
+**Plans**:
+- [x] 03-01: Build "Registro" dashboard screen with "NOVO REGISTRO" teal button and recently added vehicles card-list layout featuring pull-to-refresh.
+- [x] 03-02: Build native create/edit vehicle forms including progressive category/services choice and company selector using custom bottom sheets or full-screen modals.
+- [x] 03-03: Connect BLE auto-print trigger immediately upon successful vehicle registration.
 
-- [ ] 03-01: Build vehicle list screen, React Query infinite hook, pull-to-refresh, and live text search filter.
-- [ ] 03-02: Design the vehicle detailed view displaying historical services, prices, and vehicle properties.
+### Phase 4: Categories CRUD Module
 
-### Phase 4: Progressive Registration Wizard
-
-**Goal**: Implement the core 5-step native registration wizard for registering vehicles.
-**Depends on**: Phase 3
-**Requirements**: REGW-01, REGW-02, REGW-03, REGW-04, REGW-05, REGW-06
+**Goal**: Build full native, mobile-first CRUD management for service categories.
+**Depends on**: Phase 2
+**Requirements**: CAT-01, CAT-02, CAT-03, CAT-04
 **Success Criteria**:
+1. Attendant can list service categories in a highly-readable native card layout.
+2. Attendant can create, update, and delete categories natively using mobile-optimized forms and swipe-to-delete patterns.
 
-1. Attendants can register a vehicle in under 30 seconds using the wizard.
-2. Visual selection transitions between categories and services are smooth and haptic-enabled.
-   **Plans**: 3 plans
-   Plans:
+**Plans**:
+- [ ] 04-01: Build Categories list mobile card screen and detailed overlay sheet.
+- [ ] 04-02: Implement Category Create, Edit, and Delete forms and mutations.
 
-- [ ] 04-01: Create progressive wizard state machine in Zustand, implementing the sequence Basic Data → Category.
-- [ ] 04-02: Implement Services selection step (filtered progressively) and details input step.
-- [ ] 04-03: Create the final Summary screen, hook up the `POST /user/vehicle/create` mutation, and trigger success animations.
+### Phase 5: Services CRUD Module
 
-### Phase 5: Flagship Printing Hub
-
-**Goal**: Redesign the printing experience into a premium, first-class native module.
+**Goal**: Build full native, mobile-first CRUD management for services.
 **Depends on**: Phase 4
-**Requirements**: PRNT-01, PRNT-02, PRNT-03, PRNT-04, PRNT-05, PRNT-06, PRNT-07
+**Requirements**: SVC-01, SVC-02, SVC-03, SVC-04
 **Success Criteria**:
+1. Attendant can list services inside the active establishment in a native card list.
+2. Attendant can create, update, and delete services natively using mobile-optimized forms and swipe-to-delete patterns.
 
-1. Scanning animation displays nearby BLE thermal printers with signal RSSI.
-2. User can view high-fidelity receipt previews and tap to print or reprint from local logs.
-3. Queue manager retries automatically on bluetooth dropout.
-   **Plans**: 3 plans
-   Plans:
+**Plans**:
+- [ ] 05-01: Build Services list card screen and details modal.
+- [ ] 05-02: Implement Service Create, Edit, and Delete forms and mutations.
 
-- [ ] 05-01: Set up specialized Zustand `useBLEStore` managing discovery, queues, and diagnostics.
-- [ ] 05-02: Build Printing Hub UI, radar scanning visualization, recent jobs feed, and connection quality meter.
-- [ ] 05-03: Implement the dynamic ESC/POS receipt rendering engine, 58mm/80mm preview components, and MTU data chunking.
+### Phase 6: Companies CRUD Module
 
-### Phase 6: User Profile & Details
-
-**Goal**: Build the operational user profile and account limits views.
-**Depends on**: Phase 1
-**Requirements**: PROF-01, PROF-02, PROF-03, PROF-04
+**Goal**: Build full native, mobile-first CRUD management for partner companies.
+**Depends on**: Phase 2
+**Requirements**: COM-01, COM-02, COM-03, COM-04
 **Success Criteria**:
+1. Attendant can list associated companies in a native mobile card list.
+2. Attendant can create, update, and delete companies natively using mobile-optimized forms and swipe-to-delete patterns.
 
-1. Logged-in user sees details of subscription, active period, and employee access.
-2. Addresses are rendered as premium visual cards.
-   **Plans**: 1 plan
-   Plans:
-
-- [ ] 06-01: Bind `POST /user/auth/me` profile details to UI components, styling address listings and subscriptions.
+**Plans**:
+- [ ] 06-01: Build Companies list card screen and details modal.
+- [ ] 06-02: Implement Company Create, Edit, and Delete forms and mutations.
 
 ---
 
 ## Progress
 
-| Phase                              | Plans Complete | Status      | Completed |
-| ---------------------------------- | -------------- | ----------- | --------- |
+| Phase                              | Plans Complete | Status      | Completed  |
+| ---------------------------------- | -------------- | ----------- | ---------- |
 | 1. Authentication & Core Setup     | 4/4            | Complete    | 2026-05-26 |
-| 2. Establishments & Session        | 0/2            | Not started | -         |
-| 3. Vehicle Hub & Search            | 0/2            | Not started | -         |
-| 4. Progressive Registration Wizard | 0/3            | Not started | -         |
-| 5. Flagship Printing Hub           | 0/3            | Not started | -         |
-| 6. User Profile & Details          | 0/1            | Not started | -         |
+| 2. Standalone Selection & Drawer   | 2/2            | Complete    | 2026-05-27 |
+| 3. Registro & Vehicles CRUD        | 3/3            | Complete    | 2026-05-27 |
+| 4. Categories CRUD Module          | 0/2            | Not started | -          |
+| 5. Services CRUD Module            | 0/2            | Not started | -          |
+| 6. Companies CRUD Module           | 0/2            | Not started | -          |
 
 ---
 
-_Last updated: 2026-05-26_
+## Next Steps
+
+1. **Phase 4: Categories CRUD Module** - Plan the listing, creation, modification, and deletion of service categories natively, designed as beautiful responsive mobile cards with clean sliding validation sheets.
+2. **Endpoint Mappings**: Integrate standard category operations (`GET /user/category/list`, `POST /user/category/create`, `PUT /user/category/update`, `DELETE /user/category/delete/{id}`) under React Query and invalidate caches gracefully to sync screens.
+
+---
+
+_Last updated: 2026-05-27_

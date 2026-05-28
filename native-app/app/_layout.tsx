@@ -1,7 +1,18 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { useAuthStore } from '../hooks/useAuth';
+import { useAuthStore, isUserSubscribed } from '../hooks/useAuth';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
 
 export default function RootLayout() {
   const { user, isAuthenticated, initializeSession, isLoading } = useAuthStore();
@@ -20,8 +31,7 @@ export default function RootLayout() {
     const inAuthGroup = segmentsList[0] === '(auth)';
     const onSubscriptionPage = segmentsList[0] === '(auth)' && segmentsList[1] === 'subscription';
     
-    const isSubscribed = Array.isArray(user?.subscription_active) &&
-      user.subscription_active.some(sub => sub.status === 'active');
+    const isSubscribed = isUserSubscribed(user);
 
     if (!isAuthenticated) {
       // Unauthenticated users belong on login or register (both are in auth group)
@@ -64,8 +74,15 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <Slot />
+      </QueryClientProvider>
+    </GestureHandlerRootView>
+  );
 }
+
 
 const styles = StyleSheet.create({
   loadingContainer: {

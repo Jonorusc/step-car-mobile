@@ -2,52 +2,66 @@
 
 ## What This Is
 
-StepCar is a fully native mobile application that replaces the previous WebView-based mobile app wrapper. It integrates directly with the StepCar API to provide a fast, offline-capable, and premium native experience for vehicle wash and parking management.
+StepCar is a fully native mobile application converted from the StepCar Web Dashboard. It integrates directly with the StepCar API to provide a high-performance, offline-ready native experience for vehicle wash and parking management.
 
 ## Core Value
 
-To provide an ultra-fast, premium native registration flow for vehicles and a seamless, bulletproof Bluetooth thermal printing experience that works offline.
+To provide an ultra-fast, premium native registration flow for vehicles and a seamless, bulletproof Bluetooth thermal printing experience that matches the layout, white design pattern, and operational convenience of the web application.
 
 ## Requirements
 
 ### Validated
 
-_(None yet — transitioning from legacy WebView wrapper)_
+- **Auth Suite**: Native login, registration, token refresh, secure token persistence. (Complete)
 
 ### Active
 
-- [ ] **Auth Suite**: Native login, registration, token refresh, secure token persistence, and forgot password deep link redirects.
-- [ ] **Establishment Management**: Unified establishment list, secure switcher, CNPJ display, and active establishment selection persistence.
-- [ ] **Vehicle Hub**: Search, filter, infinite scroll pagination, and vehicle details view.
-- [ ] **Progressive Vehicle Registration Flow**: Redesigned 5-step native wizard: Basic Data → Category → Services → Details → Summary with haptic feedback.
-- [ ] **Flagship Printing Hub**: Scanner animation, recent paired printers list, auto-connect, receipt previews, dynamic templates, queue management, reprint, and offline diagnostic tools.
-- [ ] **User Profile**: Comprehensive user profile view, active subscription status, employee role details, and address cards.
+- [ ] **Establishment Selection & Standalone Flow**: A dedicated establishment selection screen `/establishments` shown on startup if no establishment is selected. Selecting an establishment persists the choice and redirects the user to the main dashboard.
+- [ ] **Web-Style Sidebar Drawer**: A beautiful sliding drawer menu on the left side of the dashboard, styled with the premium white design pattern from the web app:
+  - White background (`#ffffff`) with right border.
+  - Attendant profile header card at the top.
+  - Vertical menu items matching the 5 active web modules: Registro, Categorias, Serviços, Empresas, Veículos (with active module styled in a dark rounded card `#0f172a` with white text and icon).
+  - Bottom triggers: "Estabelecimentos" (to go back to `/establishments`), "Sair" (logout).
+- [ ] **MVP CRUD Modules (Native Mobile Optimized)**:
+  - **Veículos / Registro**: Primary screen ("Registro" menu item) with "NOVO REGISTRO" teal button, recently added vehicles mobile card list, and instant coupon printing on completion. Supports listing, editing, and deleting vehicles natively.
+  - **Categorias**: Listing, creating, updating, and deleting service categories.
+  - **Serviços**: Listing, creating, updating, and deleting services.
+  - **Empresas**: Listing, creating, updating, and deleting partner companies.
+  - **Veículos**: Listing, creating, updating, and deleting vehicles.
+- [ ] **Company Selection in Registration**: attachment of an associated company to a vehicle during registration using the `companyId` API field.
+- [ ] **Automated Coupon Printing**: Auto-connect and instant printing of receipt coupon via BLE upon successful vehicle registration.
 
 ### Out of Scope
 
-- **Password Recovery in App**: Deferred to Web platform due to security requirements and custom web workflow complexity.
-- **Service/Category Creation inside Mobile App**: High administrative complexity; deferred to the Web administration dashboard.
-- **Complex Financial Analytics Charts**: Deferred to Web dashboard; mobile app focuses on operational registry and printer capabilities.
+- **Password Recovery in App**: Redirected to the web platform.
+- **Complex Financial Analytics Charts**: Handled on the admin web dashboard.
+- **Profile Management**: Handled completely on the web dashboard.
+- **Subscription Management**: Handled completely on the web dashboard.
+- **App Configurations / General Settings**: Handled completely on the web dashboard.
 
 ## Context
 
-- **Legacy State**: The previous mobile application was an Expo WebView container that loaded `https://stepcar.com.br` and relied on WebView bridges to print coupons. This led to high latency, poor offline support, and fragile web-to-native communication.
-- **Target Users**: Car wash operators, parking lot attendants, and administrative staff who require high speed and reliable printing at checkout.
+- **Legacy State**: Transitioned from a legacy WebView wrapper to a premium native experience.
+- **Target Users**: Car wash operators and parking lot attendants who need high-speed entry and immediate coupon printing at checkout.
+- **Design Directive**: Native mobile-first design (shaped specifically for mobile UX using elegant cards, swipable lists, custom inputs, and modals, rather than forcing a desktop-table or responsive web layout). It maintains the premium white theme of the web dashboard with `#0f172a` selection tags.
 
 ## Constraints
 
-- **Hardware Integration**: Uses standard Bluetooth Classic/BLE thermal printers (58mm/80mm paper widths). Bluetooth communication must be bulletproof on both Android and iOS devices.
-- **Authentication Protocol**: Relies on JWT Bearer tokens with strict expiration. Mobile must handle automated background token refreshes to avoid user disruption.
-- **SDK Stability**: Standardized on Expo SDK 52 and Expo Router v4 for robust native architecture.
+- **Hardware Integration**: Uses standard Bluetooth Classic/BLE thermal printers (58mm/80mm paper widths).
+- **Authentication Protocol**: JWT Bearer tokens with automated Axios background refresh interceptors.
+- **SDK Stability**: Standardized on Expo SDK 52 and Expo Router v4.
+- **Git Commit Policy**: The user handles all Git commits manually. AI agents must NEVER run git commit or staging commands.
 
 ## Key Decisions
 
-| Decision                    | Rationale                                                                                                                 | Outcome   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------- |
-| **Zustand + React Query**   | Zustand handles local UI state (BLE printer selection, steps) and React Query manages server-side API caching/pagination. | — Pending |
-| **Expo Router v4**          | Provides standard file-based routing supporting deeply nested tab stacks and full-screen modal sheets natively.           | — Pending |
-| **Custom ESC/POS Chunking** | Raw byte transmission over BLE requires chunking into 20-byte payloads to support legacy thermal printers.                | — Pending |
+| Decision                    | Rationale                                                                                                                 | Outcome     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| **Zustand + React Query**   | Zustand handles local UI state and React Query manages server-side API caching and pagination.                            | — Validated |
+| **Expo Router v4**          | Provides standard file-based routing supporting modular dashboards and standalone gating screens natively.                 | — Validated |
+| **Custom ESC/POS Chunking** | Raw byte transmission over BLE requires chunking into 20-byte payloads to support legacy thermal printers.                | — Validated |
 
+- Always check how is being done in the webstecar repo (web-stepcar) before building a new feature for mobile app
 ---
 
-_Last updated: 2026-05-26 after legacy WebView assessment_
+_Last updated: 2026-05-27 after mobile-first UX optimization directive_
+

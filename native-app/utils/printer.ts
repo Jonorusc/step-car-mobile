@@ -94,11 +94,40 @@ const formatServiceLine = (name: string, price: string, lineWidth = 32, isDiscou
 };
 
 export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
-    let total_price = 0;
     const discount = data.discount || data.vehicleToCupom.discount || 0;
-    if (discount > 0) {
-        total_price -= discount;
+    let subtotal = 0;
+    
+    // Robustly compute subtotal
+    if (data.collectCategoriesToModal && Array.isArray(data.collectCategoriesToModal) && data.collectCategoriesToModal.length > 0) {
+        data.collectCategoriesToModal.forEach((category: any) => {
+            if (Array.isArray(data.collectFormattedServicesToModal)) {
+                data.collectFormattedServicesToModal
+                    .filter((service: any) => service && service.category_id === category.value)
+                    .forEach((service: any) => {
+                        const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
+                        subtotal += price;
+                    });
+            }
+        });
+    } else if (data.collectFormattedServicesToModal && Array.isArray(data.collectFormattedServicesToModal) && data.collectFormattedServicesToModal.length > 0) {
+        data.collectFormattedServicesToModal.forEach((service: any) => {
+            if (service) {
+                const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
+                subtotal += price;
+            }
+        });
+    } else if (data.vehicleToCupom && data.vehicleToCupom.services && Array.isArray(data.vehicleToCupom.services) && data.vehicleToCupom.services.length > 0) {
+        data.vehicleToCupom.services.forEach((service: any) => {
+            if (service) {
+                const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
+                subtotal += price;
+            }
+        });
+    } else if (data.vehicleToCupom && data.vehicleToCupom.price) {
+        subtotal = data.vehicleToCupom.price;
     }
+
+    const total_price = Math.max(0, subtotal - discount);
     let chunks: Buffer[] = [];
 
     const push = (txt: string, encoding: BufferEncoding = 'latin1') => chunks.push(Buffer.from(txt, encoding));
@@ -133,7 +162,8 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     push(printDividerLine());
     push(breakLine(1));
 
-    if (data.collectCategoriesToModal.length > 0) {
+    // Print services depending on data shape
+    if (data.collectCategoriesToModal && Array.isArray(data.collectCategoriesToModal) && data.collectCategoriesToModal.length > 0) {
         push(setAlignment('center'));
         push(setBold(true));
         push('Serviços\n');
@@ -146,14 +176,43 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
             push(category.label + '\n');
             push(setBold(false));
 
-            data.collectFormattedServicesToModal
-                .filter((service: any) => service.category_id === category.value)
-                .forEach((service: any) => {
-                    total_price += parseFloat(service.price);
-                    push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
-                });
+            if (Array.isArray(data.collectFormattedServicesToModal)) {
+                data.collectFormattedServicesToModal
+                    .filter((service: any) => service && service.category_id === category.value)
+                    .forEach((service: any) => {
+                        push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+                    });
+            }
         });
 
+        push(breakLine(1));
+    } else if (data.collectFormattedServicesToModal && Array.isArray(data.collectFormattedServicesToModal) && data.collectFormattedServicesToModal.length > 0) {
+        push(setAlignment('center'));
+        push(setBold(true));
+        push('Serviços\n');
+        push(setBold(false));
+        push(breakLine(1));
+
+        push(setAlignment('left'));
+        data.collectFormattedServicesToModal.forEach((service: any) => {
+            if (service) {
+                push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+            }
+        });
+        push(breakLine(1));
+    } else if (data.vehicleToCupom && data.vehicleToCupom.services && Array.isArray(data.vehicleToCupom.services) && data.vehicleToCupom.services.length > 0) {
+        push(setAlignment('center'));
+        push(setBold(true));
+        push('Serviços\n');
+        push(setBold(false));
+        push(breakLine(1));
+
+        push(setAlignment('left'));
+        data.vehicleToCupom.services.forEach((service: any) => {
+            if (service) {
+                push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+            }
+        });
         push(breakLine(1));
     }
 

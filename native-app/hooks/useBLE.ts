@@ -10,8 +10,15 @@ import { PERMISSIONS, requestMultiple, RESULTS } from 'react-native-permissions'
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
+let bleManagerInstance: BleManager | null = null;
+try {
+    bleManagerInstance = new BleManager();
+} catch (error) {
+    console.warn('[useBLE] BleManager failed to initialize (usually because Bluetooth is unsupported in this simulator/environment):', error);
+}
+
 export const useBLEStore = create<{
-    bleManager: BleManager;
+    bleManager: BleManager | null;
     devices: Device[];
     connectedDevice: Device | null;
     characteristic: Characteristic | null;
@@ -25,7 +32,7 @@ export const useBLEStore = create<{
     setConnectedDevice: (connectedDevice: Device | null) => void;
     setCharacteristic: (characteristic: Characteristic | null) => void;
 }>((set) => ({
-    bleManager: new BleManager(),
+    bleManager: bleManagerInstance,
     devices: [],
     connectedDevice: null,
     characteristic: null,
@@ -95,6 +102,7 @@ function useBLE(): BLEPrinterHook {
 
     // Monitor Bluetooth state changes
     useEffect(() => {
+        if (!bleManager) return;
         const subscription = bleManager.onStateChange((state) => {
             console.log('Bluetooth state:', state);
             setBluetoothState(state);
@@ -114,7 +122,7 @@ function useBLE(): BLEPrinterHook {
     }, [bleManager, connectedDevice, setBluetoothState, setConnectedDevice, setCharacteristic]);
 
     useEffect(() => {
-        if (!connectedDevice) return;
+        if (!connectedDevice || !bleManager) return;
 
         const subscription = bleManager.onDeviceDisconnected(connectedDevice.id, async (error, device) => {
             if (keepAliveCleanup) {
@@ -165,10 +173,12 @@ function useBLE(): BLEPrinterHook {
                 granted['android.permission.ACCESS_FINE_LOCATION'] === RESULTS.GRANTED;
 
             if (hasAllPermissions) {
-                bleManager.onStateChange((state) => {
-                    if (state === 'PoweredOn') scan();
-                    if (state === 'PoweredOff') stopScan();
-                });
+                if (bleManager) {
+                    bleManager.onStateChange((state) => {
+                        if (state === 'PoweredOn') scan();
+                        if (state === 'PoweredOff') stopScan();
+                    });
+                }
                 return true;
             }
         }
@@ -196,6 +206,10 @@ function useBLE(): BLEPrinterHook {
 
     const connectToDevice = useCallback(
         async (device: Device) => {
+            if (!bleManager) {
+                Alert.alert('Erro', 'Bluetooth não está disponível neste dispositivo.');
+                return { success: false };
+            }
             try {
                 setConnectionState('connecting');
                 setIsConnecting(true);
@@ -266,11 +280,17 @@ function useBLE(): BLEPrinterHook {
         devices.some((device) => nextDevice.id === device.id);
 
     const stopScan = useCallback(() => {
-        bleManager.stopDeviceScan();
+        if (bleManager) {
+            bleManager.stopDeviceScan();
+        }
         console.log('Scan stopped');
     }, [bleManager]);
 
     const scan = useCallback(async () => {
+        if (!bleManager) {
+            console.warn('[useBLE] Scanner not available: Bluetooth is not supported');
+            return;
+        }
         const state = await bleManager.state();
         console.log('Bluetooth state:', state);
 
@@ -279,9 +299,10 @@ function useBLE(): BLEPrinterHook {
             return;
         }
         scanDevice();
-    }, []);
+    }, [bleManager]);
 
     const scanDevice = useCallback(() => {
+        if (!bleManager) return;
         console.log('Scanning for devices...');
         bleManager.startDeviceScan(null, { allowDuplicates: false, legacyScan: true }, (error, device) => {
             if (error) {
@@ -308,7 +329,7 @@ function useBLE(): BLEPrinterHook {
     }, [bleManager, setDevices, stopScan]);
 
     const disconnect = useCallback(async () => {
-        if (connectedDevice) {
+        if (connectedDevice && bleManager) {
             try {
                 setIsConnecting(true);
                 await bleManager.cancelDeviceConnection(connectedDevice.id);
