@@ -39,7 +39,7 @@ const DeviceItem: FC<DeviceItemProps> = ({ item, connectToDevice, closeModal, di
 
   const handleDisconnect = async (event: any) => {
     event.stopPropagation(); // Stop press event propagation
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Warning);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await disconnect();
   };
 

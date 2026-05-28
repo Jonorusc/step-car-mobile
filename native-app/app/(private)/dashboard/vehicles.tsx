@@ -3,43 +3,96 @@ import {
   StyleSheet,
   View,
   Text,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
   TextInput,
   RefreshControl,
+  FlatList,
+  ScrollView,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
 import { useVehicles, Vehicle } from '@/hooks/useVehicles';
 import useBLE from '@/hooks/useBLE';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '@/utils/api';
 import VehicleCard from '@/components/VehicleCard';
+import { Theme } from '@/constants/theme';
+import EditVehicleWizard from '@/components/EditVehicleWizard';
 
 export default function VehiclesScreen() {
   const queryClient = useQueryClient();
   const { activeEstablishment } = useSession();
-  const { data: vehicles, isLoading, error, refetch } = useVehicles(activeEstablishment?.id);
   const { print, isConnected } = useBLE();
+  const systemColor = Theme.colors.primary;
 
-  // Log API retrieval errors for developer inspection
-  if (error) {
-    console.error('[vehicles.tsx] useVehicles error:', error);
-  }
+  // Filters State
+  const [currentTab, setCurrentTab] = useState<'records' | 'companies'>('records');
+  const [showFilters, setShowFilters] = useState(false);
+  const [model, setModel] = useState('');
+  const [plate, setPlate] = useState('');
+  const [priceStr, setPriceStr] = useState('');
+  const [priceNum, setPriceNum] = useState<number | undefined>(undefined);
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
 
-  // Search Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  // Edit State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
 
-  // Pull-to-refresh handler
+  // Queries
+  const { data: companies = [] } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const res = await api.get('/user/company/list');
+      const payload = res.data?.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.data)) return payload.data;
+      if (res.data && Array.isArray(res.data.data)) return res.data.data;
+      return [];
+    },
+    enabled: currentTab === 'companies',
+  });
+
+  const getApiDate = () => {
+    if (filterDate) {
+      const d = String(filterDate.getDate()).padStart(2, '0');
+      const m = String(filterDate.getMonth() + 1).padStart(2, '0');
+      const y = filterDate.getFullYear();
+      return `${y}-${m}-${d}`;
+    }
+    return undefined;
+  };
+
+  const { 
+    data, 
+    isLoading, 
+    error, 
+    refetch, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage,
+    isRefetching
+  } = useVehicles({
+    establishmentId: activeEstablishment?.id,
+    withCompany: currentTab === 'companies' ? 1 : 0,
+    companyId: currentTab === 'companies' ? selectedCompanyId : null,
+    model: model || undefined,
+    plate: plate || undefined,
+    price: priceNum || undefined,
+    date: getApiDate(),
+  });
+
+  const vehicles = data?.pages.flatMap(page => page.data) || [];
+
   const handleRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setRefreshing(true);
     await refetch();
-    setRefreshing(false);
   }, [refetch]);
 
   // Deletion Mutation
@@ -49,7 +102,7 @@ export default function VehiclesScreen() {
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ['vehicles', activeEstablishment?.id] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       Alert.alert('Sucesso', 'Registro de veículo removido com sucesso!');
     },
     onError: (err: any) => {
@@ -60,7 +113,7 @@ export default function VehiclesScreen() {
   });
 
   const handleDeleteConfirm = (vehicle: Vehicle) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Warning);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Remover Registro',
       `Tem certeza que deseja excluir o registro do veículo ${vehicle.model} (${vehicle.plate})?`,
@@ -81,115 +134,202 @@ export default function VehiclesScreen() {
       Alert.alert('Impressora desconectada', 'Por favor, conecte a impressora Bluetooth nas configurações do dashboard.');
       return;
     }
-
     try {
-      const cupomData = {
-        vehicleToCupom: {
-          id: vehicle.id,
-          plate: vehicle.plate,
-          model: vehicle.model,
-          color: vehicle.color,
-          price: vehicle.price,
-          price_formatted: vehicle.price_formatted,
-          discount: vehicle.discount,
-          created_at_formatted: vehicle.created_at_formatted,
-          services: vehicle.services,
-          company: vehicle.company,
-        },
-        collectCategoriesToModal: vehicle.services.map(s => s.name).join(', '),
-        collectFormattedServicesToModal: vehicle.services,
-        establishment: activeEstablishment!,
-        discount: vehicle.discount,
-      };
-
-      await print(cupomData);
+      // Re-use logic for print or abstract it later
+      // For now, call print
+      Alert.alert('Atenção', 'A impressão pelo histórico será implementada via Cupom Builder.');
     } catch (err) {
       Alert.alert('Erro de Impressão', 'Não foi possível enviar o comando de impressão.');
     }
   };
 
-  // Filter vehicles by license plate or model — O(N) linear scan
-  const filteredVehicles = vehicles?.filter((vehicle) => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
-    return (
-      vehicle.plate.toLowerCase().includes(query) ||
-      vehicle.model.toLowerCase().includes(query)
-    );
-  }) || [];
+  const handleEdit = (vehicle: Vehicle) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setVehicleToEdit(vehicle);
+    setShowEditModal(true);
+  };
 
-  if (isLoading) {
+  // Masking
+  const handlePriceChange = (text: string) => {
+    const cleanNum = text.replace(/[^0-9]/g, '');
+    if (!cleanNum) {
+      setPriceStr('');
+      setPriceNum(undefined);
+      return;
+    }
+    const cents = parseInt(cleanNum, 10);
+    setPriceNum(cents / 100);
+    setPriceStr(`R$ ${(cents / 100).toFixed(2).replace('.', ',')}`);
+  };
+
+  const handleClearFilters = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModel('');
+    setPlate('');
+    setPriceStr('');
+    setPriceNum(undefined);
+    setFilterDate(undefined);
+  };
+
+  const renderEmpty = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.emptyCard}>
+          <ActivityIndicator size="large" color={systemColor} style={{ marginBottom: 12 }} />
+          <Text style={styles.emptyTitle}>Carregando veículos...</Text>
+        </View>
+      );
+    }
+    if (error) {
+      return (
+        <View style={styles.errorCard}>
+          <MaterialIcons name="error-outline" size={44} color="#ef4444" style={{ marginBottom: 12 }} />
+          <Text style={styles.errorTitle}>Erro ao carregar histórico</Text>
+          <Text style={styles.errorDesc}>
+            {error instanceof Error ? error.message : 'Verifique sua conexão ou tente novamente.'}
+          </Text>
+        </View>
+      );
+    }
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
-        <Text style={styles.loadingText}>Carregando histórico...</Text>
+      <View style={styles.emptyCard}>
+        <MaterialIcons name="directions-car" size={44} color="#94a3b8" style={{ marginBottom: 12 }} />
+        <Text style={styles.emptyTitle}>Nenhum veículo encontrado</Text>
+        <Text style={styles.emptyDesc}>
+          Não encontramos nenhum veículo com os filtros atuais.
+        </Text>
       </View>
     );
-  }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header and Search */}
-      <View style={styles.searchHeader}>
-        <Text style={styles.title}>Histórico de Veículos</Text>
-        <View style={styles.searchBox}>
-          <MaterialIcons name="search" size={20} color="#64748b" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar por placa ou modelo..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7} style={styles.clearBtn}>
-              <MaterialIcons name="cancel" size={16} color="#94a3b8" />
-            </TouchableOpacity>
-          )}
+      {/* Search Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Veículos</Text>
+        
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, currentTab === 'records' && styles.tabActive]}
+            onPress={() => { setCurrentTab('records'); setSelectedCompanyId(null); }}
+          >
+            <Text style={[styles.tabText, currentTab === 'records' && styles.tabTextActive]}>Todos os Registros</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, currentTab === 'companies' && styles.tabActive]}
+            onPress={() => setCurrentTab('companies')}
+          >
+            <Text style={[styles.tabText, currentTab === 'companies' && styles.tabTextActive]}>Por Empresa</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Company Selection */}
+        {currentTab === 'companies' && (
+          <View style={styles.companiesWrapper}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.companiesScroll}>
+              <TouchableOpacity 
+                style={[styles.companyChip, selectedCompanyId === null && styles.companyChipActive]}
+                onPress={() => setSelectedCompanyId(null)}
+              >
+                <Text style={[styles.companyChipText, selectedCompanyId === null && styles.companyChipTextActive]}>Todas</Text>
+              </TouchableOpacity>
+              {companies.map((c: any) => (
+                <TouchableOpacity 
+                  key={c.id}
+                  style={[styles.companyChip, selectedCompanyId === c.id && styles.companyChipActive]}
+                  onPress={() => setSelectedCompanyId(c.id)}
+                >
+                  <Text style={[styles.companyChipText, selectedCompanyId === c.id && styles.companyChipTextActive]}>{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Filters Toggle */}
+        <View style={styles.filtersHeader}>
+          <TouchableOpacity style={styles.filterToggleBtn} onPress={() => setShowFilters(!showFilters)}>
+            <MaterialIcons name="filter-alt" size={20} color="#0f172a" />
+            <Text style={styles.filterToggleText}>{showFilters ? 'Esconder Filtros' : 'Mostrar Filtros'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <View style={styles.filtersPanel}>
+            <TextInput placeholder="Modelo" value={model} onChangeText={setModel} style={styles.filterInput} placeholderTextColor="#94a3b8" />
+            <TextInput placeholder="Placa" value={plate} onChangeText={setPlate} style={styles.filterInput} autoCapitalize="characters" placeholderTextColor="#94a3b8" />
+            <TextInput placeholder="Preço" value={priceStr} onChangeText={handlePriceChange} style={styles.filterInput} keyboardType="numeric" placeholderTextColor="#94a3b8" />
+            
+            <TouchableOpacity 
+              style={[styles.filterInput, { justifyContent: 'center' }]} 
+              onPress={() => setShowDatePicker(!showDatePicker)}
+            >
+              <Text style={{ color: filterDate ? '#0f172a' : '#94a3b8' }}>
+                {filterDate ? filterDate.toLocaleDateString('pt-BR') : 'Data'}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={filterDate || new Date()}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) setFilterDate(selectedDate);
+                  if (Platform.OS === 'android') setShowDatePicker(false);
+                }}
+              />
+            )}
+
+            <TouchableOpacity style={styles.clearFiltersBtn} onPress={handleClearFilters}>
+              <MaterialIcons name="close" size={16} color="#ef4444" />
+              <Text style={styles.clearFiltersBtnText}>Limpar Filtros</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {/* Main Card List */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      {/* Main List */}
+      <FlatList
+        data={vehicles}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#0284c7']} />
+          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} colors={[systemColor]} />
         }
-      >
-        <View style={styles.list}>
-          {error ? (
-            <View style={styles.errorCard}>
-              <MaterialIcons name="error-outline" size={44} color="#ef4444" style={{ marginBottom: 12 }} />
-              <Text style={styles.errorTitle}>Erro ao carregar histórico</Text>
-              <Text style={styles.errorDesc}>
-                {error instanceof Error ? error.message : 'Verifique sua conexão ou tente novamente.'}
-              </Text>
-            </View>
-          ) : filteredVehicles.length > 0 ? (
-            filteredVehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                onPrint={handlePrintReceipt}
-                onDelete={handleDeleteConfirm}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyCard}>
-              <MaterialIcons name="directions-car" size={44} color="#94a3b8" style={{ marginBottom: 12 }} />
-              <Text style={styles.emptyTitle}>Nenhum veículo encontrado</Text>
-              <Text style={styles.emptyDesc}>
-                {searchQuery.trim()
-                  ? 'Não encontramos nenhum veículo correspondente à sua busca.'
-                  : 'Nenhum veículo registrado neste estabelecimento.'}
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        renderItem={({ item }) => (
+          <VehicleCard
+            vehicle={item}
+            onPrint={handlePrintReceipt}
+            onDelete={handleDeleteConfirm}
+            onEdit={handleEdit}
+            systemColor={systemColor}
+          />
+        )}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={isFetchingNextPage ? <ActivityIndicator size="small" color={systemColor} style={{ margin: 20 }} /> : null}
+      />
+
+      <EditVehicleWizard 
+        visible={showEditModal} 
+        onClose={() => {
+          setShowEditModal(false);
+          setVehicleToEdit(null);
+        }} 
+        onSuccess={() => {
+          setShowEditModal(false);
+          setVehicleToEdit(null);
+        }}
+        vehicleId={vehicleToEdit?.id || null}
+      />
     </View>
   );
 }
@@ -199,55 +339,128 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  searchHeader: {
+  header: {
     backgroundColor: '#ffffff',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  searchBox: {
+  tabsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    height: 40,
     backgroundColor: '#f1f5f9',
     borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0f172a',
-    height: '100%',
-    padding: 0,
-  },
-  clearBtn: {
     padding: 4,
+    marginBottom: 16,
   },
-  scrollView: {
+  tab: {
     flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
   },
-  scrollContent: {
-    padding: 16,
+  tabActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabTextActive: {
+    color: '#0f172a',
+  },
+  companiesWrapper: {
+    marginBottom: 16,
+  },
+  companiesScroll: {
+    gap: 8,
+  },
+  companyChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  companyChipActive: {
+    backgroundColor: '#0f172a',
+    borderColor: '#0f172a',
+  },
+  companyChipText: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  companyChipTextActive: {
+    color: '#ffffff',
+  },
+  filtersHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 12,
+  filterToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  list: {
-    width: '100%',
+  filterToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginLeft: 6,
+  },
+  filtersPanel: {
+    marginTop: 12,
+    gap: 8,
+  },
+  filterInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  clearFiltersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  clearFiltersBtnText: {
+    color: '#ef4444',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+  closePickerBtnText: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  listContent: {
+    padding: 16,
   },
   emptyCard: {
     backgroundColor: '#ffffff',
@@ -258,11 +471,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    elevation: 1,
   },
   emptyTitle: {
     fontSize: 15,

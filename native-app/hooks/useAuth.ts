@@ -28,7 +28,7 @@ export interface User {
     cpf?: string;
     birthDate?: string;
     type_user: string;
-    is_subscriber?: boolean;
+    is_subscriber?: boolean | number;
     payment_status?: string;
     current_period_end?: string;
     subscription_active?: Subscription[];

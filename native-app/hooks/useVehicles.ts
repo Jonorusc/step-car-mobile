@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import api from '../utils/api';
 
 export interface Vehicle {
@@ -26,37 +26,81 @@ export interface Vehicle {
   } | null;
 }
 
-const fetchVehicles = async (establishmentId: number): Promise<Vehicle[]> => {
-  console.log('[fetchVehicles] Fetching vehicles for establishmentId:', establishmentId);
+export interface FetchVehiclesParams {
+  establishmentId?: number;
+  page?: number;
+  limitPerPage?: number;
+  model?: string;
+  plate?: string;
+  price?: number;
+  date?: string;
+  companyId?: number | null;
+  withCompany?: number;
+}
+
+export interface PaginatedVehiclesResponse {
+  data: Vehicle[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
+const fetchVehicles = async (params: FetchVehiclesParams): Promise<PaginatedVehiclesResponse> => {
+  console.log('[fetchVehicles] Fetching vehicles with params:', params);
   const response = await api.get(`/user/vehicle/list`, {
-    params: { establishmentId, withCompany: 1 },
+    params: {
+      ...params,
+      limitPerPage: params.limitPerPage || 10,
+      page: params.page || 1,
+    },
   });
   
   const root = response.data;
-  console.log('[fetchVehicles] Raw response root data:', JSON.stringify(root));
   
-  let result: Vehicle[] = [];
-  if (root) {
-    if (Array.isArray(root)) {
-      result = root;
-    } else if (Array.isArray(root.data)) {
-      result = root.data;
-    } else if (root.data && Array.isArray(root.data.data)) {
-      result = root.data.data;
-    } else if (root.data && root.data.data && Array.isArray(root.data.data.data)) {
-      result = root.data.data.data;
+  let vehicles: Vehicle[] = [];
+  let current_page = 1;
+  let last_page = 1;
+  let total = 0;
+  
+  const payload = root?.data || root;
+  
+  if (payload) {
+    if (Array.isArray(payload)) {
+      vehicles = payload;
+    } else if (Array.isArray(payload.data)) {
+      vehicles = payload.data;
+      current_page = payload.current_page || 1;
+      last_page = payload.last_page || 1;
+      total = payload.total || vehicles.length;
+    } else if (payload.data && Array.isArray(payload.data.data)) {
+      vehicles = payload.data.data;
+      current_page = payload.data.current_page || 1;
+      last_page = payload.data.last_page || 1;
+      total = payload.data.total || vehicles.length;
+    } else if (payload.data && payload.data.data && Array.isArray(payload.data.data.data)) {
+      vehicles = payload.data.data.data;
+      current_page = payload.data.data.current_page || 1;
+      last_page = payload.data.data.last_page || 1;
+      total = payload.data.data.total || vehicles.length;
     }
   }
 
-  console.log('[fetchVehicles] Parsed vehicle array length:', result.length);
-  return result;
+  console.log('[fetchVehicles] Parsed vehicle array length:', vehicles.length);
+  return { data: vehicles, current_page, last_page, total };
 };
 
-export const useVehicles = (establishmentId: number | undefined) => {
-  return useQuery<Vehicle[]>({
-    queryKey: ['vehicles', establishmentId],
-    queryFn: () => fetchVehicles(establishmentId!),
-    enabled: !!establishmentId,
+export const useVehicles = (params: Omit<FetchVehiclesParams, 'page'>) => {
+  return useInfiniteQuery({
+    queryKey: ['vehicles', params],
+    queryFn: ({ pageParam = 1 }) => fetchVehicles({ ...params, page: pageParam as number }),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.current_page < lastPage.last_page) {
+        return lastPage.current_page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+    enabled: !!params.establishmentId,
     staleTime: 2 * 60 * 1000,
   });
 };

@@ -104,7 +104,7 @@ export default function EstablishmentSwitcher({ active, list, onSelect }: Switch
       >
         <Pressable style={styles.modalOverlay} onPress={handleClose}>
           <SafeAreaView style={styles.safeArea}>
-            <Pressable style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Selecionar Estabelecimento</Text>
                 <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
