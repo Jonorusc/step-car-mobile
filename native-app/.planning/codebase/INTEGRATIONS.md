@@ -21,4 +21,8 @@ last_mapped_commit: none
 
 ## 4. API Documentation
 
-See: [API Documentation](../../../../api_doc.md)
+See: [API Documentation](../../../../swagger.yaml)
+
+## 5. Projet to emulate (The web-stepcar version)
+
+Every feature in native-app it's a version of web-stepcar feature. We're building the web system app version
