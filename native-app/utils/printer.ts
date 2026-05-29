@@ -105,7 +105,8 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
                     .filter((service: any) => service && service.category_id === category.value)
                     .forEach((service: any) => {
                         const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
-                        subtotal += price;
+                        const qty = service.quantity || 1;
+                        subtotal += price * qty;
                     });
             }
         });
@@ -113,14 +114,16 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
         data.collectFormattedServicesToModal.forEach((service: any) => {
             if (service) {
                 const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
-                subtotal += price;
+                const qty = service.quantity || 1;
+                subtotal += price * qty;
             }
         });
     } else if (data.vehicleToCupom && data.vehicleToCupom.services && Array.isArray(data.vehicleToCupom.services) && data.vehicleToCupom.services.length > 0) {
         data.vehicleToCupom.services.forEach((service: any) => {
             if (service) {
                 const price = typeof service.price === 'string' ? parseFloat(service.price) : (service.price || 0);
-                subtotal += price;
+                const qty = service.quantity || 1;
+                subtotal += price * qty;
             }
         });
     } else if (data.vehicleToCupom && data.vehicleToCupom.price) {
@@ -142,7 +145,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     // Nome da empresa (centralizado)
     push(setAlignment('center'));
     push(setBold(true));
-    push(data?.establishment.nameByCompany ?? '', 'utf-8');
+    push(data?.establishment?.nameByCompany || (data?.establishment as any)?.name || '', 'utf-8');
     push('\n');
     push(setBold(false));
     push(printDividerLine());
@@ -154,10 +157,13 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     push(setBold(false));
     push(breakLine(1));
     push(setAlignment('left'));
-    push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}\n`);
-    push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`);
-    push(`Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`);
-    push(`Entrada: ${setBold(true)}${data.vehicleToCupom.created_at_formatted}${setBold(false)}\n`);
+    push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model || 'N/A'}${setBold(false)}\n`);
+    push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate || 'N/A'}${setBold(false)}\n`);
+    push(`Cor: ${setBold(true)}${data.vehicleToCupom.color || 'N/A'}${setBold(false)}\n`);
+    push(`Entrada: ${setBold(true)}${data.vehicleToCupom.created_at_formatted || data.vehicleToCupom.created_at || 'N/A'}${setBold(false)}\n`);
+    if (data.vehicleToCupom.company?.name) {
+        push(`Convênio: ${setBold(true)}${data.vehicleToCupom.company.name}${setBold(false)}\n`);
+    }
     push(breakLine(1));
     push(printDividerLine());
     push(breakLine(1));
@@ -180,7 +186,10 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
                 data.collectFormattedServicesToModal
                     .filter((service: any) => service && service.category_id === category.value)
                     .forEach((service: any) => {
-                        push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+                        const qty = service.quantity || 1;
+                        const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                        const totalPrice = (service.price || 0) * qty;
+                        push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
                     });
             }
         });
@@ -196,7 +205,10 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
         push(setAlignment('left'));
         data.collectFormattedServicesToModal.forEach((service: any) => {
             if (service) {
-                push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+                const qty = service.quantity || 1;
+                const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                const totalPrice = (service.price || 0) * qty;
+                push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
             }
         });
         push(breakLine(1));
@@ -210,7 +222,10 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
         push(setAlignment('left'));
         data.vehicleToCupom.services.forEach((service: any) => {
             if (service) {
-                push(formatServiceLine(service.name, useCoinsFormatted(service.price)));
+                const qty = service.quantity || 1;
+                const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                const totalPrice = (service.price || 0) * qty;
+                push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
             }
         });
         push(breakLine(1));
@@ -235,7 +250,10 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
 
     // Info adicional
     push(setAlignment('left'));
-    push('CNPJ: ' + formatCNPJ(data?.establishment.document.toString()) + '\n');
+    const doc = data?.establishment?.document;
+    if (doc) {
+        push('CNPJ: ' + formatCNPJ(doc.toString()) + '\n');
+    }
     push(breakLine(1));
 
     // push("POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA.\n")

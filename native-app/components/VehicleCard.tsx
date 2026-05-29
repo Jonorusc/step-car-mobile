@@ -11,6 +11,7 @@ interface VehicleCardProps {
   onPrint: (vehicle: Vehicle) => Promise<void> | void;
   onDelete: (vehicle: Vehicle) => void;
   onEdit?: (vehicle: Vehicle) => void;
+  onViewDetails?: (vehicle: Vehicle) => void;
   isPrinting?: boolean;
   systemColor?: string;
 }
@@ -20,6 +21,7 @@ export default function VehicleCard({
   onPrint, 
   onDelete, 
   onEdit, 
+  onViewDetails,
   isPrinting = false,
   systemColor = Theme.colors.primary 
 }: VehicleCardProps) {
@@ -56,66 +58,68 @@ export default function VehicleCard({
 
   return (
     <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
-      <View style={styles.cardContainer}>
-        <View style={styles.cardHeader}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.modelText}>{vehicle.model}</Text>
-            <View style={styles.colorBadgeRow}>
-              <View style={[styles.colorDot, { backgroundColor: getBadgeColor(vehicle.color) }]} />
-              <Text style={styles.colorText}>{vehicle.color}</Text>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => onViewDetails && onViewDetails(vehicle)}>
+        <View style={styles.cardContainer}>
+          <View style={styles.cardHeader}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.modelText}>{vehicle.model}</Text>
+              <View style={styles.colorBadgeRow}>
+                <View style={[styles.colorDot, { backgroundColor: getBadgeColor(vehicle.color) }]} />
+                <Text style={styles.colorText}>{vehicle.color}</Text>
+              </View>
+            </View>
+            <View style={styles.plateBadge}>
+              <Text style={styles.plateText}>{vehicle.plate.toUpperCase()}</Text>
             </View>
           </View>
-          <View style={styles.plateBadge}>
-            <Text style={styles.plateText}>{vehicle.plate.toUpperCase()}</Text>
-          </View>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        <View style={styles.cardBody}>
-          <View style={styles.rowBetween}>
-            <Text style={styles.labelText}>Data de Entrada:</Text>
-            <Text style={styles.valueText}>{vehicle.created_at_formatted}</Text>
-          </View>
-          
-          {vehicle.company && (
-             <View style={styles.rowBetween}>
-               <Text style={styles.labelText}>Empresa:</Text>
-               <Text style={[styles.valueText, { color: '#6366f1', fontWeight: '600' }]} numberOfLines={1}>
-                 {vehicle.company.name}
-               </Text>
-             </View>
-          )}
-
-          <View style={styles.rowBetween}>
-            <Text style={styles.labelText}>Valor Total:</Text>
-            <Text style={[styles.priceHighlight, { color: systemColor }]}>{netPriceFormatted}</Text>
-          </View>
-          {vehicle.discount > 0 && (
+          <View style={styles.cardBody}>
             <View style={styles.rowBetween}>
-              <Text style={styles.labelText}>Desconto Aplicado:</Text>
-              <Text style={styles.discountText}>- R$ {(vehicle.discount / 100).toFixed(2).replace('.', ',')}</Text>
+              <Text style={styles.labelText}>Data de Entrada:</Text>
+              <Text style={styles.valueText}>{vehicle.created_at_formatted}</Text>
             </View>
-          )}
-        </View>
-
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.actionButtonPrimary, { backgroundColor: systemColor, flex: 1 }]}
-            onPress={() => onPrint(vehicle)}
-            disabled={isPrinting}
-          >
-            {isPrinting ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <>
-                <MaterialIcons name="print" size={20} color="#FFF" style={{ marginRight: 6 }} />
-                <Text style={styles.actionTextPrimary}>Imprimir Recibo</Text>
-              </>
+            
+            {vehicle.company && (
+               <View style={styles.rowBetween}>
+                 <Text style={styles.labelText}>Empresa:</Text>
+                 <Text style={[styles.valueText, { color: '#6366f1', fontWeight: '600' }]} numberOfLines={1}>
+                   {vehicle.company.name}
+                 </Text>
+               </View>
             )}
-          </TouchableOpacity>
+
+            <View style={styles.rowBetween}>
+              <Text style={styles.labelText}>Valor Total:</Text>
+              <Text style={[styles.priceHighlight, { color: systemColor }]}>{netPriceFormatted}</Text>
+            </View>
+            {vehicle.discount > 0 && (
+              <View style={styles.rowBetween}>
+                <Text style={styles.labelText}>Desconto Aplicado:</Text>
+                <Text style={styles.discountText}>- R$ {(vehicle.discount / 100).toFixed(2).replace('.', ',')}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={[styles.actionButtonPrimary, { backgroundColor: systemColor, flex: 1 }]}
+              onPress={() => onPrint(vehicle)}
+              disabled={isPrinting}
+            >
+              {isPrinting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <MaterialIcons name="print" size={20} color="#FFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.actionTextPrimary}>Imprimir Recibo</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Swipeable>
   );
 }

@@ -16,18 +16,21 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
-import { useVehicles, Vehicle } from '@/hooks/useVehicles';
-import useBLE from '@/hooks/useBLE';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '@/utils/api';
 import VehicleCard from '@/components/VehicleCard';
-import { Theme } from '@/constants/theme';
 import EditVehicleWizard from '@/components/EditVehicleWizard';
+import VehicleDetailsModal from '@/components/VehicleDetailsModal';
+import { Theme } from '@/constants/theme';
+import { useCouponBuilder } from '@/hooks/useCouponBuilder';
+import useBLE from '@/hooks/useBLE';
+import { useVehicles, Vehicle } from '@/hooks/useVehicles';
 
 export default function VehiclesScreen() {
   const queryClient = useQueryClient();
   const { activeEstablishment } = useSession();
   const { print, isConnected } = useBLE();
+  const { buildCouponData } = useCouponBuilder();
   const systemColor = Theme.colors.primary;
 
   // Filters State
@@ -41,9 +44,16 @@ export default function VehiclesScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
 
-  // Edit State
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
+  // Edit Vehicle State
+  const [editWizardVisible, setEditWizardVisible] = useState(false);
+  const [editingVehicleId, setEditingVehicleId] = useState<number | null>(null);
+
+  // View Details State
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [detailsVehicleId, setDetailsVehicleId] = useState<number | null>(null);
+
+  // Printing State
+  const [printingId, setPrintingId] = useState<number | null>(null);
 
   // Queries
   const { data: companies = [] } = useQuery({
@@ -69,13 +79,13 @@ export default function VehiclesScreen() {
     return undefined;
   };
 
-  const { 
-    data, 
-    isLoading, 
-    error, 
-    refetch, 
-    fetchNextPage, 
-    hasNextPage, 
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
     isFetchingNextPage,
     isRefetching
   } = useVehicles({
@@ -134,19 +144,28 @@ export default function VehiclesScreen() {
       Alert.alert('Impressora desconectada', 'Por favor, conecte a impressora Bluetooth nas configurações do dashboard.');
       return;
     }
+    setPrintingId(vehicle.id);
     try {
-      // Re-use logic for print or abstract it later
-      // For now, call print
-      Alert.alert('Atenção', 'A impressão pelo histórico será implementada via Cupom Builder.');
+      const cupomData = await buildCouponData(vehicle.id);
+      if (!cupomData) throw new Error('Falha ao gerar dados do cupom');
+      await print(cupomData);
     } catch (err) {
       Alert.alert('Erro de Impressão', 'Não foi possível enviar o comando de impressão.');
+    } finally {
+      setPrintingId(null);
     }
   };
 
   const handleEdit = (vehicle: Vehicle) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setVehicleToEdit(vehicle);
-    setShowEditModal(true);
+    setEditingVehicleId(vehicle.id);
+    setEditWizardVisible(true);
+  };
+
+  const handleViewDetails = (vehicle: Vehicle) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setDetailsVehicleId(vehicle.id);
+    setDetailsModalVisible(true);
   };
 
   // Masking
@@ -207,16 +226,16 @@ export default function VehiclesScreen() {
       {/* Search Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Veículos</Text>
-        
+
         {/* Tabs */}
         <View style={styles.tabsContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, currentTab === 'records' && styles.tabActive]}
             onPress={() => { setCurrentTab('records'); setSelectedCompanyId(null); }}
           >
             <Text style={[styles.tabText, currentTab === 'records' && styles.tabTextActive]}>Todos os Registros</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.tab, currentTab === 'companies' && styles.tabActive]}
             onPress={() => setCurrentTab('companies')}
           >
@@ -228,14 +247,14 @@ export default function VehiclesScreen() {
         {currentTab === 'companies' && (
           <View style={styles.companiesWrapper}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.companiesScroll}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.companyChip, selectedCompanyId === null && styles.companyChipActive]}
                 onPress={() => setSelectedCompanyId(null)}
               >
                 <Text style={[styles.companyChipText, selectedCompanyId === null && styles.companyChipTextActive]}>Todas</Text>
               </TouchableOpacity>
               {companies.map((c: any) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={c.id}
                   style={[styles.companyChip, selectedCompanyId === c.id && styles.companyChipActive]}
                   onPress={() => setSelectedCompanyId(c.id)}
@@ -261,9 +280,9 @@ export default function VehiclesScreen() {
             <TextInput placeholder="Modelo" value={model} onChangeText={setModel} style={styles.filterInput} placeholderTextColor="#94a3b8" />
             <TextInput placeholder="Placa" value={plate} onChangeText={setPlate} style={styles.filterInput} autoCapitalize="characters" placeholderTextColor="#94a3b8" />
             <TextInput placeholder="Preço" value={priceStr} onChangeText={handlePriceChange} style={styles.filterInput} keyboardType="numeric" placeholderTextColor="#94a3b8" />
-            
-            <TouchableOpacity 
-              style={[styles.filterInput, { justifyContent: 'center' }]} 
+
+            <TouchableOpacity
+              style={[styles.filterInput, { justifyContent: 'center' }]}
               onPress={() => setShowDatePicker(!showDatePicker)}
             >
               <Text style={{ color: filterDate ? '#0f172a' : '#94a3b8' }}>
@@ -305,6 +324,8 @@ export default function VehiclesScreen() {
             onPrint={handlePrintReceipt}
             onDelete={handleDeleteConfirm}
             onEdit={handleEdit}
+            onViewDetails={handleViewDetails}
+            isPrinting={printingId === item.id}
             systemColor={systemColor}
           />
         )}
@@ -318,17 +339,20 @@ export default function VehiclesScreen() {
         ListFooterComponent={isFetchingNextPage ? <ActivityIndicator size="small" color={systemColor} style={{ margin: 20 }} /> : null}
       />
 
-      <EditVehicleWizard 
-        visible={showEditModal} 
-        onClose={() => {
-          setShowEditModal(false);
-          setVehicleToEdit(null);
-        }} 
+      <EditVehicleWizard
+        visible={editWizardVisible}
+        onClose={() => setEditWizardVisible(false)}
         onSuccess={() => {
-          setShowEditModal(false);
-          setVehicleToEdit(null);
+          setEditWizardVisible(false);
+          refetch();
         }}
-        vehicleId={vehicleToEdit?.id || null}
+        vehicleId={editingVehicleId}
+      />
+
+      <VehicleDetailsModal
+        visible={detailsModalVisible}
+        onClose={() => setDetailsModalVisible(false)}
+        vehicleId={detailsVehicleId}
       />
     </View>
   );

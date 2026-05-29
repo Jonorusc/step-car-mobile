@@ -1,50 +1,133 @@
-# Welcome to your Expo app 👋
+# StepCar Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Welcome to the **StepCar** React Native / Expo mobile application. This repository contains the code for both iOS and Android platforms.
 
-## Get started
+---
 
-1. Install dependencies
+## Prerequisites
 
-    ```bash
-    npm install
-    ```
+Before you can run the app you need to have the following tools installed on your machine:
 
-2. Start the app
+- **Node.js** (>= 18.x) – https://nodejs.org/
+- **Yarn** (>= 1.22) – `npm i -g yarn`
+- **Expo CLI** – `npm i -g expo-cli`
+- **Java Development Kit** – JDK **22** (required by Gradle 8.7). Set `JAVA_HOME` accordingly.
+- **Android SDK**
+  - Build‑Tools **35.0.0**
+  - Platform **API 35** (Android 14)
+  - Android Studio (optional, for AVD management) – https://developer.android.com/studio
+- **Kotlin** – version **1.9.24** (used by Gradle)
+- **Gradle** – version **8.7** (wrapper will download automatically)
+- **Xcode** – version **15**+ (required for iOS builds)
+- **Watchman** (optional, improves file watching on macOS) – `brew install watchman`
+- **Android platform tools** – ensure `adb` is in your `PATH`
+- **.env file** – create a `.env` at the project root with at least `EXPO_PUBLIC_API_URL` defined.
 
-    ```bash
-     npx expo start
-    ```
+---
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting the Code
 
 ```bash
-npm run reset-project
+# Clone the repository
+git clone https://github.com/your-username/StepCar.git
+
+# Enter the native app directory
+cd StepCar/step-car-mobile/native-app
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## Install Dependencies
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+# Install JavaScript dependencies
+yarn install
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+If you prefer npm, run `npm install` instead (the scripts use Yarn).
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## iOS setup
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. **Install CocoaPods** (if not already installed):
+   ```bash
+   sudo gem install cocoapods
+   ```
+2. **Install iOS pods**:
+   ```bash
+   cd ios && pod install && cd ..
+   ```
+3. Ensure Xcode is installed and the iOS simulator is available.
+
+---
+
+## Android setup
+
+1. Make the Gradle wrapper executable (only needed once):
+   ```bash
+   chmod +x android/gradlew
+   ```
+2. (Optional) Clean the Android build folder:
+   ```bash
+   ./android/gradlew clean
+   ```
+3. Verify required SDK components are installed:
+   ```bash
+   sdkmanager "platforms;android-35" "build-tools;35.0.0"
+   ```
+
+---
+
+## Running on iOS
+
+```bash
+yarn ios
+```
+
+Expo will build the iOS bundle and launch it in the iOS simulator. The first run may take a few minutes while native code is compiled.
+
+---
+
+## Running on Android
+
+```bash
+yarn android
+```
+
+You can run on a physical device (USB‑debugging enabled) or an emulator. To start an AVD:
+
+```bash
+emulator -list-avds          # list available virtual devices
+emulator -avd <AVD_NAME>    # launch the chosen AVD
+```
+
+---
+
+## Common Commands
+
+- `yarn start` – start the Expo dev server without launching a simulator.
+- `yarn lint` – run ESLint checks.
+- `yarn test` – execute unit tests (if any).
+
+---
+
+## Troubleshooting
+
+- **Gradle permission errors** – ensure `android/gradlew` is executable: `chmod +x android/gradlew`
+- **Missing Android SDK components** – run `sdkmanager "platforms;android-35" "build-tools;35.0.0"`
+- **Java version mismatch** – verify with `java -version` that you are using JDK 22.
+- **CocoaPods issues** – run `pod repo update` or delete the `Pods/` folder and reinstall.
+
+---
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Open a pull request.
+
+---
+
+Happy coding! 🎉

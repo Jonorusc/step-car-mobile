@@ -56,6 +56,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
   const [plate, setPlate] = useState('');
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
 
   const colorsList = [
     { value: "Branco", label: "Branco", hex: "#FFFFFF" },
@@ -177,6 +178,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
       setSelectedCompany(null);
       setDiscountStr('');
       setDiscountCents(0);
+      setServiceSearch('');
     }
   }, [visible, fullVehicle]);
 
@@ -447,36 +449,82 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                 <Text style={styles.stepTitle}>Selecione os Serviços</Text>
                 <Text style={styles.stepDesc}>Serviços das categorias: {selectedCategories.map(c => c.name).join(', ')}</Text>
                 
+                <View style={styles.searchContainer}>
+                  <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar serviço..."
+                    placeholderTextColor="#94a3b8"
+                    value={serviceSearch}
+                    onChangeText={setServiceSearch}
+                  />
+                </View>
+
                 {loadingServices ? (
                   <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 40 }} />
                 ) : (
                   <View style={styles.servicesList}>
-                    {services.map((svc: Service) => {
-                      const qty = getServiceQuantity(svc.id);
-                      const isSelected = qty > 0;
-                      return (
-                        <View key={svc.id} style={[styles.serviceRow, isSelected ? styles.serviceRowSelected : null]}>
-                          <View style={styles.serviceRowLeft}>
-                            <Text style={[styles.serviceRowText, isSelected ? styles.serviceRowTextSelected : null]}>
-                              {svc.name}
-                            </Text>
-                            <Text style={[styles.serviceRowPrice, isSelected ? styles.serviceRowPriceSelected : null]}>
-                              R$ {(svc.price / 100).toFixed(2).replace('.', ',')}
-                            </Text>
+                    {(() => {
+                      const grouped: Record<number, Service[]> = {};
+                      services.forEach((svc: Service) => {
+                        if (serviceSearch && !svc.name.toLowerCase().includes(serviceSearch.toLowerCase())) {
+                          return;
+                        }
+                        const catId = svc.category_id || 0;
+                        if (!grouped[catId]) grouped[catId] = [];
+                        grouped[catId].push(svc);
+                      });
+
+                      const renderedGroups = Object.keys(grouped).map(catIdStr => {
+                        const catId = parseInt(catIdStr, 10);
+                        const cat = selectedCategories.find(c => c.id === catId);
+                        const catName = cat ? cat.name : 'Outros';
+                        const groupServices = grouped[catId];
+                        
+                        if (groupServices.length === 0) return null;
+
+                        return (
+                          <View key={catId} style={styles.categorySection}>
+                            <Text style={styles.categorySectionTitle}>{catName}</Text>
+                            {groupServices.map((svc: Service) => {
+                              const qty = getServiceQuantity(svc.id);
+                              const isSelected = qty > 0;
+                              return (
+                                <View key={svc.id} style={[styles.serviceRow, isSelected ? styles.serviceRowSelected : null]}>
+                                  <View style={styles.serviceRowLeft}>
+                                    <Text style={[styles.serviceRowText, isSelected ? styles.serviceRowTextSelected : null]}>
+                                      {svc.name}
+                                    </Text>
+                                    <Text style={[styles.serviceRowPrice, isSelected ? styles.serviceRowPriceSelected : null]}>
+                                      R$ {(svc.price / 100).toFixed(2).replace('.', ',')}
+                                    </Text>
+                                  </View>
+                                  
+                                  <View style={styles.qtyControls}>
+                                    <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty - 1)} style={styles.qtyBtn} activeOpacity={0.7} disabled={qty === 0}>
+                                      <MaterialIcons name="remove" size={16} color={qty > 0 ? "#0f172a" : "#cbd5e1"} />
+                                    </TouchableOpacity>
+                                    <Text style={[styles.qtyText, qty === 0 && { color: '#cbd5e1' }]}>{qty}</Text>
+                                    <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty + 1)} style={styles.qtyBtn} activeOpacity={0.7}>
+                                      <MaterialIcons name="add" size={16} color="#0f172a" />
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                              );
+                            })}
                           </View>
-                          
-                          <View style={styles.qtyControls}>
-                            <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty - 1)} style={styles.qtyBtn} activeOpacity={0.7} disabled={qty === 0}>
-                              <MaterialIcons name="remove" size={16} color={qty > 0 ? "#0f172a" : "#cbd5e1"} />
-                            </TouchableOpacity>
-                            <Text style={[styles.qtyText, qty === 0 && { color: '#cbd5e1' }]}>{qty}</Text>
-                            <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty + 1)} style={styles.qtyBtn} activeOpacity={0.7}>
-                              <MaterialIcons name="add" size={16} color="#0f172a" />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      );
-                    })}
+                        );
+                      });
+                      
+                      if (renderedGroups.every(g => g === null)) {
+                        return (
+                          <Text style={{textAlign: 'center', color: '#64748b', marginTop: 20}}>
+                            Nenhum serviço encontrado para "{serviceSearch}"
+                          </Text>
+                        );
+                      }
+                      return renderedGroups;
+                    })()}
                   </View>
                 )}
 
@@ -836,8 +884,36 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   servicesList: {
-    gap: 10,
-    marginTop: 10,
+    paddingBottom: 24,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  categorySection: {
+    marginBottom: 20,
+  },
+  categorySectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginLeft: 4,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -848,6 +924,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     backgroundColor: '#ffffff',
+    marginBottom: 10,
   },
   serviceRowSelected: {
     borderColor: '#0f172a',

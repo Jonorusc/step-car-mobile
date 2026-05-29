@@ -17,6 +17,8 @@ import { useSession } from '@/hooks/useSession';
 import useBLE from '@/hooks/useBLE';
 import { useCouponBuilder } from '@/hooks/useCouponBuilder';
 import RegistroWizard from '@/components/RegistroWizard';
+import EditVehicleWizard from '@/components/EditVehicleWizard';
+import VehicleDetailsModal from '@/components/VehicleDetailsModal';
 import VehicleCard from '@/components/VehicleCard';
 import { Theme } from '@/constants/theme';
 
@@ -82,6 +84,10 @@ export default function RegistroDashboard() {
 
   const [wizardVisible, setWizardVisible] = useState(false);
   const [printingId, setPrintingId] = useState<number | null>(null);
+  const [editWizardVisible, setEditWizardVisible] = useState(false);
+  const [editingVehicleId, setEditingVehicleId] = useState<number | null>(null);
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [detailsVehicleId, setDetailsVehicleId] = useState<number | null>(null);
 
   // Busca isolada (apenas 5 itens, trigger on load)
   const { data: vehicles, isLoading, error, refetch } = useRecentVehicles(activeEstablishment?.id);
@@ -135,7 +141,14 @@ export default function RegistroDashboard() {
 
   const handleEdit = (vehicle: any) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Editar Veículo', 'Funcionalidade de edição em desenvolvimento.');
+    setEditingVehicleId(vehicle.id);
+    setEditWizardVisible(true);
+  };
+
+  const handleViewDetails = (vehicle: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setDetailsVehicleId(vehicle.id);
+    setDetailsModalVisible(true);
   };
 
   const handleWizardSuccess = async (createdVehicle: any) => {
@@ -211,6 +224,7 @@ export default function RegistroDashboard() {
             onPrint={handlePrint}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onViewDetails={handleViewDetails}
             isPrinting={printingId === item.id}
             systemColor={systemColor}
           />
@@ -221,6 +235,22 @@ export default function RegistroDashboard() {
         visible={wizardVisible}
         onClose={() => setWizardVisible(false)}
         onSuccess={handleWizardSuccess}
+      />
+
+      <EditVehicleWizard
+        visible={editWizardVisible}
+        onClose={() => setEditWizardVisible(false)}
+        onSuccess={() => {
+          setEditWizardVisible(false);
+          refetch();
+        }}
+        vehicleId={editingVehicleId}
+      />
+
+      <VehicleDetailsModal
+        visible={detailsModalVisible}
+        onClose={() => setDetailsModalVisible(false)}
+        vehicleId={detailsVehicleId}
       />
     </View>
   );

@@ -13,6 +13,10 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://maven.pkg.jetbrains.space/public/p/compose/dev" }
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev" }
+        maven { url "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/eap" }
     }
     dependencies {
       classpath("com.android.tools.build:gradle:8.1.1")
@@ -37,6 +41,10 @@ allprojects {
 
         google()
         mavenCentral()
+        maven { url "https://maven.pkg.jetbrains.space/public/p/compose/dev" }
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev" }
+        maven { url "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/eap" }
         maven { url 'https://www.jitpack.io' }
     }
 }
