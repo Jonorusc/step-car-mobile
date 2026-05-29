@@ -1,9 +1,12 @@
-import { Slot, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { Slot, useRouter, useSegments, useRootNavigationState, SplashScreen } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { useAuthStore, isUserSubscribed } from '../hooks/useAuth';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,11 +16,12 @@ const queryClient = new QueryClient({
   },
 });
 
-
 export default function RootLayout() {
   const { user, isAuthenticated, initializeSession, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   // Load initial session on startup
   useEffect(() => {
@@ -26,6 +30,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isLoading) return;
+    if (!rootNavigationState?.key) return; // Wait for navigation state to be ready before routing
 
     const segmentsList = segments as string[];
     const inAuthGroup = segmentsList[0] === '(auth)';
@@ -37,42 +42,32 @@ export default function RootLayout() {
       // Unauthenticated users belong on login or register (both are in auth group)
       // If they are on a private page or the subscription gate page, send them to login
       if (!inAuthGroup || onSubscriptionPage) {
-        const timer = setTimeout(() => {
-          router.replace('/login');
-        }, 1);
-        return () => clearTimeout(timer);
+        router.replace('/login');
       }
     } else {
       // Authenticated users
       if (!isSubscribed) {
         // Locked: redirect to subscription blocking gate
         if (!onSubscriptionPage) {
-          const timer = setTimeout(() => {
-            router.replace('/subscription');
-          }, 1);
-          return () => clearTimeout(timer);
+          router.replace('/subscription');
         }
       } else {
         // Active Subscribers belong in private sections
         // If they are in the auth group (login, register, subscription), redirect to private index
         if (inAuthGroup) {
-          const timer = setTimeout(() => {
-            router.replace('/');
-          }, 1);
-          return () => clearTimeout(timer);
+          router.replace('/');
         }
       }
     }
-  }, [isAuthenticated, user, segments, isLoading]);
+    
+    setIsNavigationReady(true);
+  }, [isAuthenticated, user, segments, isLoading, rootNavigationState?.key]);
 
-  if (isLoading && !user) {
-    // Show premium minimal loader during startup rehydration
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (isNavigationReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isNavigationReady]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -82,7 +77,6 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
 
 const styles = StyleSheet.create({
   loadingContainer: {

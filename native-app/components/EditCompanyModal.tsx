@@ -17,6 +17,8 @@ import * as Haptics from 'expo-haptics';
 import { useCreateCompany, useUpdateCompany, Company } from '@/hooks/useCompany';
 import { useSession } from '@/hooks/useSession';
 import { Theme } from '@/constants/theme';
+import { validateDocument, validateEmail } from '@/utils/validation';
+import { getSafeErrorMessage } from '@/utils/errorMessages';
 
 const maskPhone = (value: string) => {
   const v = value.replace(/\D/g, '').slice(0, 11);
@@ -107,6 +109,14 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
         Alert.alert('Dados Incompletos', 'Preencha todos os campos obrigatórios da empresa.');
         return;
       }
+      if (!validateDocument(document)) {
+        Alert.alert('Documento Inválido', 'Insira um CPF ou CNPJ válido.');
+        return;
+      }
+      if (!validateEmail(email)) {
+        Alert.alert('E-mail Inválido', 'Insira um e-mail válido.');
+        return;
+      }
       setCurrentStep(2);
     } else if (currentStep === 2) {
       if (!postalcode.trim() || !street.trim() || !neighborhood.trim() || !state.trim() || !city.trim() || !number.trim()) {
@@ -125,8 +135,13 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const payload = {
-      establishmentId: activeEstablishment?.id,
+    if (!activeEstablishment) {
+      Alert.alert('Erro', 'Nenhum estabelecimento selecionado.');
+      return;
+    }
+
+    const basePayload = {
+      establishmentId: activeEstablishment.id,
       companyName,
       fantasyName,
       document: document.replace(/[-./]/g, ''),
@@ -145,21 +160,28 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
     };
 
     if (isEdit) {
-      (payload as any).id = company.id;
+      updateMutation.mutate({ ...basePayload, id: company.id }, {
+        onSuccess: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          onSuccess();
+        },
+        onError: (err: any) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Alert.alert('Erro', getSafeErrorMessage(err, 'Erro ao atualizar empresa.'));
+        }
+      });
+    } else {
+      createMutation.mutate(basePayload, {
+        onSuccess: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          onSuccess();
+        },
+        onError: (err: any) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Alert.alert('Erro', getSafeErrorMessage(err, 'Erro ao salvar empresa.'));
+        }
+      });
     }
-    
-    const mutation = isEdit ? updateMutation : createMutation;
-
-    mutation.mutate(payload, {
-      onSuccess: () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onSuccess();
-      },
-      onError: (err: any) => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Erro', err.response?.data?.message || 'Erro ao salvar empresa.');
-      }
-    });
   };
 
   const renderStepIndicator = () => (

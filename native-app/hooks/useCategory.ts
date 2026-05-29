@@ -85,6 +85,7 @@ export const useDeleteCategory = () => {
     },
     onSuccess: () => {
         qc.invalidateQueries({ queryKey: ['categories'] });
+        qc.invalidateQueries({ queryKey: ['services'] });
     },
   });
 };

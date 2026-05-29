@@ -18,6 +18,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { useSession } from '@/hooks/useSession';
 import { BackendEstablishment } from '@/hooks/useEstablishments';
+import { getSafeErrorMessage } from '@/utils/errorMessages';
+import { validatePlate } from '@/utils/validation';
 
 interface Service {
   id: number;
@@ -198,8 +200,8 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
         Alert.alert('Campos Obrigatórios', 'Por favor, preencha todos os dados básicos do veículo.');
         return;
       }
-      if (plate.length < 7) {
-        Alert.alert('Placa Inválida', 'A placa do veículo deve conter pelo menos 7 caracteres.');
+      if (!validatePlate(plate)) {
+        Alert.alert('Placa Inválida', 'Insira uma placa válida (formato ABC1D23 ou ABC1234).');
         return;
       }
     } else if (currentStep === 2 && selectedCategories.length === 0) {
@@ -245,7 +247,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const message = err.response?.data?.message || 'Não foi possível cadastrar o veículo.';
+      const message = getSafeErrorMessage(err, 'Não foi possível cadastrar o veículo.');
       Alert.alert('Erro no Cadastro', message);
     },
   });

@@ -7,6 +7,7 @@ import { buildPrintMessage } from '@/utils/printer';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import { BleManager, Characteristic, Device } from 'react-native-ble-plx';
 import { PERMISSIONS, requestMultiple, RESULTS } from 'react-native-permissions';
+import logger from '@/utils/logger';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
@@ -14,7 +15,7 @@ let bleManagerInstance: BleManager | null = null;
 try {
     bleManagerInstance = new BleManager();
 } catch (error) {
-    console.warn('[useBLE] BleManager failed to initialize (usually because Bluetooth is unsupported in this simulator/environment):', error);
+    logger.warn('[useBLE] BleManager failed to initialize (usually because Bluetooth is unsupported in this simulator/environment):', error);
 }
 
 export const useBLEStore = create<{
@@ -104,11 +105,11 @@ function useBLE(): BLEPrinterHook {
     useEffect(() => {
         if (!bleManager) return;
         const subscription = bleManager.onStateChange((state) => {
-            console.log('Bluetooth state:', state);
+            logger.log('Bluetooth state:', state);
             setBluetoothState(state);
 
             if (state === 'PoweredOff' && connectedDevice) {
-                console.log('Bluetooth desligado, limpando conexão');
+                logger.log('Bluetooth desligado, limpando conexão');
                 setConnectedDevice(null);
                 setCharacteristic(null);
                 Alert.alert(
@@ -129,9 +130,9 @@ function useBLE(): BLEPrinterHook {
                 keepAliveCleanup();
                 keepAliveCleanup = null;
             }
-            console.log('Device disconnected', error, device);
+            logger.log('Device disconnected', error, device);
             if (error) {
-                console.error('Disconnection error:', error);
+                logger.error('Disconnection error:', error);
             }
 
             // 🚨 Só tenta reconectar se o Bluetooth estiver ligado
@@ -140,7 +141,7 @@ function useBLE(): BLEPrinterHook {
                 setIsConnecting(true);
                 await reconnectToDevice(device).finally(() => setIsConnecting(false));
             } else {
-                console.log('Reconexão ignorada (Bluetooth desligado ou desconexão manual).');
+                logger.log('Reconexão ignorada (Bluetooth desligado ou desconexão manual).');
                 setConnectedDevice(null);
                 setCharacteristic(null);
             }
@@ -240,7 +241,7 @@ function useBLE(): BLEPrinterHook {
 
                 return { success: true };
             } catch (error) {
-                console.error('Failed to connect:', error);
+                logger.error('Failed to connect:', error);
                 setConnectionState('disconnected');
                 Alert.alert('Erro', 'Não foi possível conectar ao dispositivo');
                 return { success: false };
@@ -253,18 +254,18 @@ function useBLE(): BLEPrinterHook {
 
     const reconnectToDevice = useCallback(
         async (device: Device) => {
-            console.log('Attempting to reconnect...');
+            logger.log('Attempting to reconnect...');
             const maxAttempts = 3;
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
                     const { success } = await connectToDevice(device);
                     if (success) {
-                        console.log('Reconnected successfully!');
+                        logger.log('Reconnected successfully!');
                         return;
                     }
                 } catch (error) {
-                    console.error(`Reconnection attempt ${attempt} failed:`, error);
+                    logger.error(`Reconnection attempt ${attempt} failed:`, error);
                 }
                 await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
             }
@@ -283,16 +284,16 @@ function useBLE(): BLEPrinterHook {
         if (bleManager) {
             bleManager.stopDeviceScan();
         }
-        console.log('Scan stopped');
+        logger.log('Scan stopped');
     }, [bleManager]);
 
     const scan = useCallback(async () => {
         if (!bleManager) {
-            console.warn('[useBLE] Scanner not available: Bluetooth is not supported');
+            logger.warn('[useBLE] Scanner not available: Bluetooth is not supported');
             return;
         }
         const state = await bleManager.state();
-        console.log('Bluetooth state:', state);
+        logger.log('Bluetooth state:', state);
 
         if (state !== 'PoweredOn') {
             Alert.alert('Bluetooth Desligado', 'Ative o Bluetooth para escanear dispositivos.');
@@ -303,11 +304,11 @@ function useBLE(): BLEPrinterHook {
 
     const scanDevice = useCallback(() => {
         if (!bleManager) return;
-        console.log('Scanning for devices...');
+        logger.log('Scanning for devices...');
         bleManager.startDeviceScan(null, { allowDuplicates: false, legacyScan: true }, (error, device) => {
             if (error) {
                 stopScan();
-                console.error('Scan error:', error);
+                logger.error('Scan error:', error);
                 Alert.alert('Erro', 'Não foi possível escanear dispositivos. Verifique se o Bluetooth está ligado.');
                 return;
             }
@@ -334,7 +335,7 @@ function useBLE(): BLEPrinterHook {
                 setIsConnecting(true);
                 await bleManager.cancelDeviceConnection(connectedDevice.id);
             } catch (error) {
-                console.error('Error during disconnect:', error);
+                logger.error('Error during disconnect:', error);
             } finally {
                 // 🔑 limpa intervalo do keepAlive
                 if (keepAliveCleanup) {
@@ -384,7 +385,7 @@ function useBLE(): BLEPrinterHook {
             setProcessingPrint(false);
             return true;
         } catch (error) {
-            console.error('Erro ao imprimir:', error);
+            logger.error('Erro ao imprimir:', error);
             return false;
         }
     };

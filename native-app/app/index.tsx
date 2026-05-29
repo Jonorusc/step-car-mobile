@@ -15,7 +15,6 @@ export default function Index() {
   }
 
   if (!isAuthenticated) {
-    console.log('user is authenticated')
     return <Redirect href="/login" />;
   }
 

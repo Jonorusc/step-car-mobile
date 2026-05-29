@@ -1,9 +1,18 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import logger from './logger';
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_BASE_URL) {
+    throw new Error(
+        'EXPO_PUBLIC_API_URL is not configured. Check your .env file.'
+    );
+}
 
 const api = axios.create({
-    baseURL: process.env.EXPO_PUBLIC_API_URL || 'https://stepcarhomolog.com.br/api/v1',
-    timeout: 10000,
+    baseURL: API_BASE_URL,
+    timeout: 15000,
 });
 
 api.interceptors.request.use(
@@ -14,7 +23,7 @@ api.interceptors.request.use(
                 config.headers.Authorization = `Bearer ${token}`;
             }
         } catch (error) {
-            console.error('Error fetching access token from SecureStore:', error);
+            logger.error('Error fetching access token from SecureStore:', error);
         }
         return config;
     },
@@ -68,7 +77,7 @@ api.interceptors.response.use(
                 }
 
                 const response = await axios.post(
-                    `${process.env.EXPO_PUBLIC_API_URL || 'https://stepcarhomolog.com.br/api/v1'}/user/auth/refresh`,
+                    `${API_BASE_URL}/user/auth/refresh`,
                     {},
                     {
                         headers: {

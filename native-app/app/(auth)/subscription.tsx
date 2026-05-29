@@ -14,6 +14,7 @@ import * as WebBrowser from 'expo-web-browser';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import logger from '../../utils/logger';
 
 export default function SubscriptionScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function SubscriptionScreen() {
       // Direct them to the main website to complete subscription payment
       await WebBrowser.openBrowserAsync('https://stepcar.com.br');
     } catch (error) {
-      console.error('Failed to open WebBrowser:', error);
+      logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir o link de assinatura.');
     }
   };

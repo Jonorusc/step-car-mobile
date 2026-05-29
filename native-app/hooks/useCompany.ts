@@ -38,6 +38,37 @@ export interface ListCompanyResponse {
   total: number;
 }
 
+export interface CreateCompanyPayload {
+  establishmentId: number;
+  companyName: string;
+  fantasyName: string;
+  document: string;
+  phone: string;
+  email: string;
+  closingDate: number;
+  address: {
+    postalcode: string;
+    street: string;
+    neighborhood: string;
+    state: string;
+    city: string;
+    number: string;
+    complement?: string;
+  };
+}
+
+export interface UpdateCompanyPayload extends CreateCompanyPayload {
+  id: number;
+}
+
+export interface DownloadReportPayload {
+  establishment_id: number;
+  company_id: number;
+  date_start: string;
+  date_end: string;
+  company_name: string;
+}
+
 export const fetchCompanies = async (
   establishmentId: number,
   companyName: string | null,
@@ -73,7 +104,7 @@ export const useCompanyList = (establishmentId: number, companyName: string | nu
 export const useCreateCompany = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: CreateCompanyPayload) => {
       const { data } = await api.post('/user/company/create', payload);
       return data;
     },
@@ -86,7 +117,7 @@ export const useCreateCompany = () => {
 export const useUpdateCompany = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: UpdateCompanyPayload) => {
       const { data } = await api.put('/user/company/update', payload);
       return data;
     },
@@ -111,7 +142,7 @@ export const useDeleteCompany = () => {
 
 export const useDownloadReport = () => {
   return useMutation({
-    mutationFn: async ({ establishment_id, company_id, date_start, date_end, company_name }: any) => {
+    mutationFn: async ({ establishment_id, company_id, date_start, date_end, company_name }: DownloadReportPayload) => {
       // For React Native we use arraybuffer to receive binary data properly from axios
       const response = await api.post('/user/report', {
         establishment_id,

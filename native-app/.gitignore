@@ -31,6 +31,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# Android Keystores (NEVER commit signing keys)
+*.keystore
 
 # typescript
 *.tsbuildinfo

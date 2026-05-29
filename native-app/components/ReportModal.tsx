@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDownloadReport, Company } from '@/hooks/useCompany';
 import { useSession } from '@/hooks/useSession';
 import { Theme } from '@/constants/theme';
+import { getSafeErrorMessage } from '@/utils/errorMessages';
 
 interface ReportModalProps {
   visible: boolean;
@@ -55,7 +56,7 @@ export default function ReportModal({ visible, onClose, company }: ReportModalPr
       },
       onError: (err: any) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Erro', err.response?.data?.message || 'Falha ao gerar o relatório.');
+        Alert.alert('Erro', getSafeErrorMessage(err, 'Falha ao gerar o relatório.'));
       }
     });
   };

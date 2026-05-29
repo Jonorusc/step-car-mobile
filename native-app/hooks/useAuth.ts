@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import api from '../utils/api';
 import * as SecureStore from 'expo-secure-store';
+import logger from '../utils/logger';
 
 export interface Subscription {
     id: number;
@@ -45,12 +46,14 @@ export const isUserSubscribed = (user: User | null): boolean => {
     }
 
     const hasActiveSubscription = Array.isArray(user.subscription_active) &&
-        user.subscription_active.some(sub => sub.status === 'active');
+        user.subscription_active.some(sub => 
+            sub.status === 'active' && 
+            new Date(sub.expires_at) > new Date()
+        );
 
     return (
         user.is_subscriber === true ||
         user.is_subscriber === 1 ||
-        (user.is_subscriber as any) === '1' ||
         user.payment_status === 'active' ||
         hasActiveSubscription
     );
@@ -135,6 +138,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     logout: async () => {
         set({ isLoading: true });
         try {
+            // Invalidate token server-side (fire-and-forget)
+            try {
+                await api.post('/user/auth/logout');
+            } catch {
+                // Silent fail — don't block local logout
+            }
             await SecureStore.deleteItemAsync('access_token');
             await SecureStore.deleteItemAsync('refresh_token');
             set({ user: null, isAuthenticated: false, isLoading: false });
@@ -151,16 +160,17 @@ export const useAuthStore = create<AuthState>((set) => ({
             if (token) {
                 const response = await api.post('/user/auth/me');
                 const user = response.data?.data;
-                if (user) {
+                if (user && user.active !== 0) {
                     set({ user, isAuthenticated: true });
                 } else {
+                    // Inactive account or invalid data — force logout
                     await SecureStore.deleteItemAsync('access_token');
                     await SecureStore.deleteItemAsync('refresh_token');
                     set({ user: null, isAuthenticated: false });
                 }
             }
         } catch (error) {
-            console.error('Failed to initialize session:', error);
+            logger.error('Failed to initialize session:', error);
             await SecureStore.deleteItemAsync('access_token');
             await SecureStore.deleteItemAsync('refresh_token');
             set({ user: null, isAuthenticated: false });

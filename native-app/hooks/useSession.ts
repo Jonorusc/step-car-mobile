@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { BackendEstablishment } from './useEstablishments';
+import logger from '../utils/logger';
 
 interface SessionState {
     activeEstablishment: BackendEstablishment | null;
@@ -25,7 +26,7 @@ export const useSessionStore = create<SessionState>((set) => ({
             }
             set({ activeEstablishment: establishment });
         } catch (error) {
-            console.error('Failed to set active establishment in secure store:', error);
+            logger.error('Failed to set active establishment in secure store:', error);
             set({ activeEstablishment: establishment });
         }
     },
@@ -58,7 +59,7 @@ export const useSessionStore = create<SessionState>((set) => ({
                 set({ activeEstablishment: null, isLoadingSession: false });
             }
         } catch (error) {
-            console.error('Failed to initialize session establishment:', error);
+            logger.error('Failed to initialize session establishment:', error);
             if (list.length === 1) {
                 set({ activeEstablishment: list[0], isLoadingSession: false });
             } else {

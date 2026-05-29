@@ -15,9 +15,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../hooks/useAuth';
 import { validateEmail, validatePassword } from '../../utils/validation';
+import { checkRateLimit, recordAttempt, resetAttempts } from '../../utils/rateLimiter';
+import { getSafeErrorMessage } from '../../utils/errorMessages';
 import * as WebBrowser from 'expo-web-browser';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
+import logger from '../../utils/logger';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,6 +33,15 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState('');
 
   const handleLogin = async () => {
+    // Rate-limit check: block after 5 failed attempts for 30s
+    const { allowed, remainingMs } = checkRateLimit('login');
+    if (!allowed) {
+      const secs = Math.ceil(remainingMs / 1000);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Muitas Tentativas', `Aguarde ${secs} segundos antes de tentar novamente.`);
+      return;
+    }
+
     let hasError = false;
 
     // Reset errors
@@ -54,13 +66,15 @@ export default function LoginScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await login(email, password);
+      resetAttempts('login');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // Navigate to index upon successful login
       router.replace('/');
     } catch (error: any) {
+      recordAttempt('login');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const message = error.response?.data?.message || 'Credenciais inválidas. Verifique seu e-mail e senha.';
+      const message = getSafeErrorMessage(error, 'Credenciais inválidas. Verifique seu e-mail e senha.');
       Alert.alert('Erro de Autenticação', message);
     }
   };
@@ -70,7 +84,7 @@ export default function LoginScreen() {
     try {
       await WebBrowser.openBrowserAsync('https://stepcar.com.br');
     } catch (error) {
-      console.error('Failed to open WebBrowser:', error);
+      logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir o link de recuperação de senha.');
     }
   };
@@ -81,7 +95,7 @@ export default function LoginScreen() {
       // Redirect to the web registration page
       await WebBrowser.openBrowserAsync('https://stepcar.com.br/sign-up');
     } catch (error) {
-      console.error('Failed to open WebBrowser:', error);
+      logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir a página de cadastro.');
     }
   };

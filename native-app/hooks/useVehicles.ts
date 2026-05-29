@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import api from '../utils/api';
+import logger from '../utils/logger';
 
 export interface Vehicle {
   id: number;
@@ -46,7 +47,7 @@ export interface PaginatedVehiclesResponse {
 }
 
 const fetchVehicles = async (params: FetchVehiclesParams): Promise<PaginatedVehiclesResponse> => {
-  console.log('[fetchVehicles] Fetching vehicles with params:', params);
+  logger.log('[fetchVehicles] Fetching vehicles with params:', params);
   const response = await api.get(`/user/vehicle/list`, {
     params: {
       ...params,
@@ -85,7 +86,7 @@ const fetchVehicles = async (params: FetchVehiclesParams): Promise<PaginatedVehi
     }
   }
 
-  console.log('[fetchVehicles] Parsed vehicle array length:', vehicles.length);
+  logger.log('[fetchVehicles] Parsed vehicle array length:', vehicles.length);
   return { data: vehicles, current_page, last_page, total };
 };
 

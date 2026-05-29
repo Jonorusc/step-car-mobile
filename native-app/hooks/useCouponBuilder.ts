@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import api from '../utils/api';
 import { CUPOM } from '../types';
+import logger from '../utils/logger';
 
 export const useCouponBuilder = () => {
     const [isBuildingCoupon, setIsBuildingCoupon] = useState(false);
@@ -45,7 +46,7 @@ export const useCouponBuilder = () => {
 
             return cupomData;
         } catch (error) {
-            console.error('[useCouponBuilder] Error building coupon data:', error);
+            logger.error('[useCouponBuilder] Error building coupon data:', error);
             return null;
         } finally {
             setIsBuildingCoupon(false);

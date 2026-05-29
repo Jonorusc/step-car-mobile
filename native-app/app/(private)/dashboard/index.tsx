@@ -101,6 +101,7 @@ export default function RegistroDashboard() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ['recent_vehicles', activeEstablishment?.id] });
       refetch();
+      Alert.alert('Sucesso', 'Registro de veículo removido com sucesso!');
     },
     onError: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
