@@ -1,57 +1,223 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  RefreshControl,
+  FlatList,
+} from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Swipeable } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
+import { Theme } from '@/constants/theme';
+import { useSession } from '@/hooks/useSession';
+import { useCompanyList, useDeleteCompany, Company } from '@/hooks/useCompany';
+
+import EditCompanyModal from '@/components/EditCompanyModal';
+import ReportModal from '@/components/ReportModal';
+
 export default function CompaniesScreen() {
-  const handleAdd = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Criar Empresa', 'O formulário de criação de empresas será implementado na Fase 6.');
+  const { activeEstablishment } = useSession();
+
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Modals state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchText);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchText]);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+    isRefetching
+  } = useCompanyList(activeEstablishment?.id || 0, debouncedSearch || null);
+
+  const deleteMutation = useDeleteCompany();
+
+  const companies = data?.pages.flatMap(page => page.data) || [];
+
+  const handleDelete = (id: number, name: string) => {
+    Alert.alert(
+      'Excluir Empresa',
+      `Tem certeza que deseja excluir a empresa "${name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            deleteMutation.mutate(id, {
+              onSuccess: () => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              },
+              onError: (err: any) => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert('Erro', err.response?.data?.message || 'Erro ao excluir a empresa.');
+              }
+            });
+          }
+        }
+      ]
+    );
   };
 
-  const companies = [
-    { id: 1, name: 'Localiza Rent a Car', cnpj: '02.230.150/0001-44' },
-    { id: 2, name: 'Movida Aluguel de Carros', cnpj: '08.332.180/0001-99' },
-    { id: 3, name: 'Unidas Locadora', cnpj: '10.550.210/0001-12' },
-  ];
+  const renderRightActions = (item: Company) => {
+    return (
+      <View style={styles.swipeActionsContainer}>
+        <TouchableOpacity
+          style={[styles.swipeActionBtn, { backgroundColor: Theme.colors.primary }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedCompany(item);
+            setShowEditModal(true);
+          }}
+        >
+          <MaterialIcons name="edit" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Editar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.swipeActionBtn, { backgroundColor: '#f59e0b' }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedCompany(item);
+            setShowReportModal(true);
+          }}
+        >
+          <MaterialIcons name="assessment" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Relatório</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.swipeActionBtn, { backgroundColor: '#ef4444' }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            handleDelete(item.id, item.fantasy_name || item.company_name);
+          }}
+        >
+          <MaterialIcons name="delete" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Excluir</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderItem = ({ item }: { item: Company }) => (
+    <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
+      <View style={styles.cardContainer}>
+        <View style={styles.cardContent}>
+          <Text style={styles.companyName}>{item.fantasy_name || item.company_name}</Text>
+          <Text style={styles.companyDoc}>CNPJ: {item.document.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')}</Text>
+          <Text style={styles.companyEmail}>{item.email}</Text>
+        </View>
+        <MaterialIcons name="chevron-left" size={24} color="#cbd5e1" />
+      </View>
+    </Swipeable>
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Gestão de Empresas Parceiras</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-          <MaterialIcons name="add" size={20} color="#ffffff" />
-          <Text style={styles.addBtnText}>Nova Empresa</Text>
+        <Text style={styles.title}>Empresas Parceiras</Text>
+        <TouchableOpacity 
+          style={styles.addBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedCompany(null);
+            setShowEditModal(true);
+          }}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="add" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.list}>
-        {companies.map((comp) => (
-          <View key={comp.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconCircle}>
-                <MaterialIcons name="business" size={20} color="#4f46e5" />
-              </View>
-              <View style={styles.textGroup}>
-                <Text style={styles.cardTitle}>{comp.name}</Text>
-                <Text style={styles.cardCnpj}>CNPJ: {comp.cnpj}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.cardFooter}>
-              <TouchableOpacity style={styles.actionBtn}>
-                <MaterialIcons name="edit" size={16} color="#4f46e5" />
-                <Text style={[styles.actionBtnText, { color: '#4f46e5' }]}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn}>
-                <MaterialIcons name="delete" size={16} color="#ef4444" />
-                <Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Excluir</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+      <View style={styles.searchContainer}>
+        <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar empresa por nome..."
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholderTextColor="#94a3b8"
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchText('')}>
+            <MaterialIcons name="close" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+        )}
       </View>
-    </ScrollView>
+
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={companies}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.listContainer}
+          renderItem={renderItem}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="business" size={48} color="#cbd5e1" />
+              <Text style={styles.emptyText}>Nenhuma empresa encontrada.</Text>
+            </View>
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={Theme.colors.primary} style={{ marginVertical: 20 }} />
+            ) : null
+          }
+        />
+      )}
+
+      {/* Edit/Create Modal */}
+      <EditCompanyModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={() => {
+          setShowEditModal(false);
+          setSelectedCompany(null);
+        }}
+        company={selectedCompany}
+      />
+
+      {/* Report Modal */}
+      <ReportModal 
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        company={selectedCompany}
+      />
+    </View>
   );
 }
 
@@ -60,87 +226,125 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  scrollContent: {
-    padding: 16,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#334155',
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0f172a',
   },
   addBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#4f46e5',
-    paddingHorizontal: 12,
-    height: 36,
-    borderRadius: 6,
-    alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Theme.colors.primary,
     justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  addBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
-  list: {
-    width: '100%',
-  },
-  card: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#ffffff',
+    marginHorizontal: 24,
+    marginBottom: 16,
     borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    padding: 16,
-    marginBottom: 16,
   },
-  cardHeader: {
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  listContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  cardContainer: {
     flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4f46e510',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  textGroup: {
+  cardContent: {
     flex: 1,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  companyName: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1e293b',
+    marginBottom: 4,
   },
-  cardCnpj: {
-    fontSize: 12,
+  companyDoc: {
+    fontSize: 13,
     color: '#64748b',
-    marginTop: 2,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 12,
+  companyEmail: {
+    fontSize: 13,
+    color: '#64748b',
   },
-  actionBtn: {
+  swipeActionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
+    marginBottom: 12,
+    marginLeft: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
+  swipeActionBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    height: '100%',
+  },
+  swipeActionText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: '#64748b',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

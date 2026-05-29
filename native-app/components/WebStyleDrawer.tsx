@@ -79,6 +79,7 @@ export default function WebStyleDrawer({ isOpen, onClose, activeRoute, onNavigat
 
   const menuItems = [
     { label: 'Registro', route: 'index', icon: 'edit' },
+    { label: 'Financeiro', route: 'financeiro', icon: 'assessment' },
     { label: 'Categorias', route: 'categories', icon: 'view-module' },
     { label: 'Serviços', route: 'services', icon: 'build' },
     { label: 'Empresas', route: 'companies', icon: 'business' },

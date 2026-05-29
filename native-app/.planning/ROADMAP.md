@@ -11,7 +11,8 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [x] **Phase 3: Registro & Vehicles CRUD** - Build the main operational Registro dashboard with CRUD for vehicles, company selector, and BLE receipt printing.
 - [x] **Phase 4: Categories CRUD Module** - Implement listing, creating, updating, and deleting of service categories.
 - [x] **Phase 5: Services CRUD Module** - Implement listing, creating, updating, and deleting of services.
-- [ ] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
+- [x] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
+- [x] **Phase 7: Financeiro Dashboard** - Implement financial dashboard with stats, metrics, and graphs based on a date range picker.
 
 ---
 
@@ -116,7 +117,8 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 | 3. Registro & Vehicles CRUD        | 3/3            | Complete    | 2026-05-27 |
 | 4. Categories CRUD Module          | 2/2            | Complete    | 2026-05-29 |
 | 5. Services CRUD Module            | 2/2            | Complete    | 2026-05-29 |
-| 6. Companies CRUD Module           | 0/2            | Not started | -          |
+| 6. Companies CRUD Module           | 3/3            | Complete    | 2026-05-29 |
+| 7. Financeiro Dashboard            | 2/2            | Complete    | 2026-05-29 |
 
 ---
 

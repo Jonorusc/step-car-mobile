@@ -34,6 +34,7 @@ export default function DashboardLayout() {
     services: 'Serviços',
     companies: 'Empresas',
     vehicles: 'Veículos',
+    financeiro: 'Financeiro',
     settings: 'Configurações',
   };
 
