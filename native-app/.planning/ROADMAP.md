@@ -10,7 +10,7 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [x] **Phase 2: Standalone Selection & Drawer** - Build the standalone establishment selector screen and the premium white sliding navigation drawer.
 - [x] **Phase 3: Registro & Vehicles CRUD** - Build the main operational Registro dashboard with CRUD for vehicles, company selector, and BLE receipt printing.
 - [x] **Phase 4: Categories CRUD Module** - Implement listing, creating, updating, and deleting of service categories.
-- [ ] **Phase 5: Services CRUD Module** - Implement listing, creating, updating, and deleting of services.
+- [x] **Phase 5: Services CRUD Module** - Implement listing, creating, updating, and deleting of services.
 - [ ] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
 
 ---
@@ -115,7 +115,7 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 | 2. Standalone Selection & Drawer   | 2/2            | Complete    | 2026-05-27 |
 | 3. Registro & Vehicles CRUD        | 3/3            | Complete    | 2026-05-27 |
 | 4. Categories CRUD Module          | 2/2            | Complete    | 2026-05-29 |
-| 5. Services CRUD Module            | 0/2            | Not started | -          |
+| 5. Services CRUD Module            | 2/2            | Complete    | 2026-05-29 |
 | 6. Companies CRUD Module           | 0/2            | Not started | -          |
 
 ---
