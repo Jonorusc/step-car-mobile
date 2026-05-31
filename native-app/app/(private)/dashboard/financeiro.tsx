@@ -347,6 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    gap: 12,
   },
   metricCardHalf: {
     flex: 1,
@@ -360,12 +361,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.02,
     shadowRadius: 4,
     elevation: 1,
-  },
-  metricCardHalfFirst: {
-    marginRight: 6,
-  },
-  metricCardHalfSecond: {
-    marginLeft: 6,
   },
   metricLabel: {
     fontSize: 12,
