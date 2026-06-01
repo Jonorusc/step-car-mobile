@@ -10,7 +10,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "App precisa acessar Bluetooth para se conectar a dispositivos próximos",
+        "NSLocationWhenInUseUsageDescription": "App precisa de localização para escanear dispositivos Bluetooth"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +45,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

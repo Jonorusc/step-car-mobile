@@ -1,4 +1,4 @@
-import { CUPOM } from "@/types"
+import { CUPOM, Services } from "@/types"
 import { Buffer } from "buffer"
 import { useCoinsFormatted } from "./currency"
 
@@ -94,8 +94,9 @@ const formatServiceLine = (name: string, price: string, lineWidth = 32, isDiscou
 }
 
 export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
+
   let total_price = 0
-  const discount = data.discount || data.vehicleToCupom.discount || 0
+  const discount = data.vehicle.discount || 0
   if (discount > 0) {
     total_price -= discount
   }
@@ -113,7 +114,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   // Nome da empresa (centralizado)
   push(setAlignment("center"))
   push(setBold(true))
-  push(data?.establishment.nameByCompany ?? "", "utf-8")
+  push((data?.coupon?.name_by_company ?? data.establishment.name_by_company), "utf-8")
   push("\n")
   push(setBold(false))
   push(printDividerLine())
@@ -125,15 +126,19 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   push(setBold(false))
   push(breakLine(1))
   push(setAlignment("left"))
-  push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model}${setBold(false)}\n`)
-  push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate}${setBold(false)}\n`)
-  push(`Cor: ${setBold(true)}${data.vehicleToCupom.color}${setBold(false)}\n`)
-  push(`Entrada: ${setBold(true)}${data.vehicleToCupom.created_at_formatted}${setBold(false)}\n`)
+  push(`Modelo: ${setBold(true)}${data.vehicle.model}${setBold(false)}\n`)
+  push(`Placa: ${setBold(true)}${data.vehicle.plate}${setBold(false)}\n`)
+  push(`Cor: ${setBold(true)}${data.vehicle.color}${setBold(false)}\n`)
+  push(`Entrada: ${setBold(true)}${data.vehicle.createdAtFormatted}${setBold(false)}\n`)
+
+  if (data?.company) {
+    push(`Empresa: ${setBold(true)}${data.company.company_name}${setBold(false)}\n`)
+  }
   push(breakLine(1))
   push(printDividerLine())
   push(breakLine(1))
 
-  if (data.collectCategoriesToModal.length > 0) {
+  if (data.services.length > 0) {
     push(setAlignment("center"))
     push(setBold(true))
     push("Serviços\n")
@@ -141,17 +146,29 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     push(breakLine(1))
 
     push(setAlignment("left"))
-    data.collectCategoriesToModal.forEach((category: any) => {
+
+    // Agrupa serviços por categoria
+    const grouped = data.services.reduce((acc: any, service: any) => {
+      if (!acc[service.category_id]) {
+        acc[service.category_id] = {
+          category_name: service.category_name,
+          services: []
+        }
+      }
+      acc[service.category_id].services.push(service)
+      return acc
+    }, {})
+
+    // Percorre cada categoria agrupada
+    Object.values(grouped).forEach((category: any) => {
       push(setBold(true))
-      push(category.label + "\n")
+      push(category.category_name + "\n")
       push(setBold(false))
 
-      data.collectFormattedServicesToModal
-        .filter((service: any) => service.category_id === category.value)
-        .forEach((service: any) => {
-          total_price += parseFloat(service.price)
-          push(formatServiceLine(service.name, useCoinsFormatted(service.price)))
-        })
+      category.services.forEach((service: Services) => {
+        total_price += parseFloat(String(service.price * service.quantity))
+        push(formatServiceLine(`x${service.quantity} ${service.name}`, useCoinsFormatted(service.price * service.quantity)))
+      })
     })
 
     push(breakLine(1))
@@ -187,19 +204,38 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
   // push("NOTURNA\n")
   // push(setBold(false))
 
-  let description =
-    "POR FAVOR VERIFIQUE SE EXISTEM OBJETOS DE VALORES NO INTERIOR DO VEICULO E AVISE A GERENCIA. SEGUNDA A SABADO DAS 08:00 AS 17:30 DOMINGOS E FERIADOS 08:00 AS 12:00 CASO NAO SEJA RETIRADO O VEICULO ATE O FECHAMENTO DO LAVA RAPIDO SERA COBRADO TAXA DE ESTACIONAMENTO NOTURNA"
+  if (data?.coupon?.print_qrcode == true) {
+    push(setAlignment("center"))   // Centraliza
+    push(setBold(true))
+    push("Detalhes do serviço via QR code\n")
+    push(setBold(false))
+    push(breakLine(1))
 
-  if (data?.establishment?.coupon?.info) {
-    description = data.establishment.coupon?.info
+    const siteUrl = `https://stepcar.com.br/vehicle/receipt/${data.vehicle.id}`;
+    // const siteUrl = `https://stepcarhomolog.com.br/vehicle/receipt/${data.vehicle.id}`;
+
+    push(setQRModel(2))             // Modelo 2
+    push(setQRSize(6))              // Tamanho (1 a 16)
+    push(setQRErrorCorrection(49))  // Correção: 48=L, 49=M, 50=Q, 51=H
+    push(storeQRData(siteUrl))      // Armazena os dados (sua URL)
+    push(printStoredQR())           // Imprime o QR Code
+    push(breakLine(1))
+  }
+
+  let description = '';
+
+  if (data?.coupon?.info) {
+    description = data.coupon?.info
   }
 
   const lengthMax = 32
   const partsText = description.match(new RegExp(`.{1,${lengthMax}}`, "g"))
 
-  partsText?.forEach((value, index) => {
-    push(String(`${value}\n`).trim())
-  })
+  if (description.length > 0) {
+    partsText?.forEach((value, index) => {
+      push(String(`${value}\n`).trim())
+    })
+  }
 
   push(feedPaper(3)) // Aumenta o avanço de papel
   push(cutPaper()) // Adiciona corte

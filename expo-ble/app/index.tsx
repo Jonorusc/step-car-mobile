@@ -1,17 +1,23 @@
 import Devices from "@/components/Devices";
 import useBLE, { useBLEStore } from "@/hooks/useBLE";
-import { CUPOM } from "@/types";
+import { Company, Coupon, CUPOM, Establishment, Services, Vehicle } from "@/types";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, SafeAreaView, Text, TouchableOpacity } from "react-native";
+import { Alert, Animated, Platform, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from "react-native";
 import WebView from "react-native-webview";
+import SuccessModal from "@/components/SuccessModal";
+import NetInfo from '@react-native-community/netinfo';
 
 const Main = () => {
     /** useStates */
     const [cupomData, setCupomData] = useState<CUPOM | null>(null);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-    
+    const [modalVisible, setModalVisible] = useState(false);
+    const [dataShared, setDataShared] = useState<any>(null);
+    const [isConnected, setIsConnected] = useState(true);
+
     /** Hooks */
     const {
         requestPermissions,
@@ -56,18 +62,32 @@ const Main = () => {
             return;
         }
 
-        // if (msg.type === "DOWNLOAD_PDF") {
-        //     const { data, fileName } = msg
-        //     handleDownloadPDF(data, fileName)
-        //     return
-        // }
-    
-        const cupomData = JSON.parse(data) as CUPOM
-        setCupomData(cupomData)
+        const response = JSON.parse(data);
+
+        if (response.type === "DOWNLOAD_PDF") {
+            const base64 = response.data;
+            const fileName = response.fileName;
+            setDataShared({
+                base64: base64,
+                fileName: fileName
+            });
+            setModalVisible(true);
+            return;
+        }
+
+        const cupom = {
+            vehicle: response.vehicle as Vehicle,
+            services: response.services as Services[],
+            establishment: response.establishment as Establishment,
+            company: response.company as Company,
+            coupon: (response.coupon[0] ?? null) as Coupon,
+        } as CUPOM
+
+        setCupomData(cupom)
 
         if (connectionState === "connected" && connectedDevice !== null) {
             if (! processingPrint) {
-                print(cupomData)
+                print(cupom)
             }
 
             return
@@ -95,37 +115,66 @@ const Main = () => {
     }
 
     useEffect(() => {
-        console.log('Solicitando permissões!!!'); // remover linha
+        let unsubscribe = NetInfo.addEventListener((state: any) => {
+            setIsConnected(state?.isConnected);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
         requestPermissions();
     }, []);
 
+    if (!isConnected) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <MaterialIcons 
+                    style={{marginBottom: 10}}
+                    name="signal-cellular-connected-no-internet-0-bar"
+                    size={65}
+                    color="#00567aff" 
+                />
+                <Text>Sem conexão com a internet</Text>
+            </View>
+        );
+    }
+
     return (
-        <SafeAreaView style={styles.container}>
-            <WebView
-                source={{ uri: "https://stepcar.com.br" }}
-                onMessage={handleMessage}
-                javaScriptEnabled
-                domStorageEnabled
-            />
+        <SafeAreaProvider>
+            <SafeAreaView style={styles.container}>
+                <WebView
+                    source={{ uri: "https://stepcar.com.br" }}
+                    // source={{ uri: "https://stepcarhomolog.com.br" }}
+                    onMessage={handleMessage}
+                    style={styles.webview}
+                    javaScriptEnabled
+                    domStorageEnabled
+                />
 
-            <Animated.View style={[styles.floatingButton, { opacity: fadeAnim }]}>
-                <TouchableOpacity style={styles.floatingButtonContent} onPress={handleDisconnect} activeOpacity={0.7}>
-                    <Text style={{ color: "white", fontSize: 6 }}>Desconectar</Text>
-                    <MaterialIcons name="print-disabled" size={24} color="white" />
-                </TouchableOpacity>
-            </Animated.View>
+                <Animated.View style={[styles.floatingButton, { opacity: fadeAnim }]}>
+                    <TouchableOpacity style={styles.floatingButtonContent} onPress={handleDisconnect} activeOpacity={0.7}>
+                        <Text style={{ color: "white", fontSize: 6 }}>Desconectar</Text>
+                        <MaterialIcons name="print-disabled" size={24} color="white" />
+                    </TouchableOpacity>
+                </Animated.View>
 
-            <Devices
-                cupomData={cupomData}
-                closeModal={handleCloseModal}
-                visible={isModalVisible}
-                connectedDevice={connectedDevice}
-                connectToDevice={connectToDevice}
-                devices={devices}
-                print={print}
-                disconnect={disconnect}
-            />
-        </SafeAreaView>
+                <Devices
+                    cupomData={cupomData}
+                    closeModal={handleCloseModal}
+                    visible={isModalVisible}
+                    connectedDevice={connectedDevice}
+                    connectToDevice={connectToDevice}
+                    devices={devices}
+                    print={print}
+                    disconnect={disconnect}
+                />
+
+                <SuccessModal 
+                    data={dataShared}
+                    visible={modalVisible} 
+                    onClose={() => setModalVisible(false)} />
+            </SafeAreaView>
+        </SafeAreaProvider>
     );
 }
 
@@ -133,6 +182,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: "relative",
+  },
+  webview:{
+    flex: 1,
   },
   floatingButton: {
     position: "absolute",
