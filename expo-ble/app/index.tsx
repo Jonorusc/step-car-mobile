@@ -3,11 +3,12 @@ import useBLE, { useBLEStore } from "@/hooks/useBLE";
 import { Company, Coupon, CUPOM, Establishment, Services, Vehicle } from "@/types";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Platform, Text, TouchableOpacity } from "react-native";
+import { Alert, Animated, Platform, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from "react-native";
 import WebView from "react-native-webview";
 import SuccessModal from "@/components/SuccessModal";
+import NetInfo from '@react-native-community/netinfo';
 
 const Main = () => {
     /** useStates */
@@ -15,7 +16,8 @@ const Main = () => {
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [dataShared, setDataShared] = useState<any>(null);
-    
+    const [isConnected, setIsConnected] = useState(true);
+
     /** Hooks */
     const {
         requestPermissions,
@@ -113,8 +115,29 @@ const Main = () => {
     }
 
     useEffect(() => {
+        let unsubscribe = NetInfo.addEventListener((state: any) => {
+            setIsConnected(state?.isConnected);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
         requestPermissions();
     }, []);
+
+    if (!isConnected) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <MaterialIcons 
+                    style={{marginBottom: 10}}
+                    name="signal-cellular-connected-no-internet-0-bar"
+                    size={65}
+                    color="#00567aff" 
+                />
+                <Text>Sem conexão com a internet</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaProvider>
