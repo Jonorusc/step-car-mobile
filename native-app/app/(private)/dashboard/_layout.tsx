@@ -19,7 +19,12 @@ export default function DashboardLayout() {
     print,
     disconnect,
     devices,
+    requestPermissions,
   } = useBLE();
+
+  React.useEffect(() => {
+    requestPermissions();
+  }, []);
 
   // Derive active route from segment
   // segments: ["(private)", "dashboard", "categories"] -> "categories"

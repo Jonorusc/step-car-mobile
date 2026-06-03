@@ -18,6 +18,7 @@ import { useServiceList, useDeleteService, Service } from '@/hooks/useService';
 import { useCategoryList } from '@/hooks/useCategory';
 import { Theme } from '@/constants/theme';
 import EditServiceModal from '@/components/EditServiceModal';
+import { useLocalSearchParams } from 'expo-router';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -33,6 +34,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function ServicesScreen() {
   const { activeEstablishment } = useSession();
   const systemColor = Theme.colors.primary;
+  const { categoryId } = useLocalSearchParams();
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
@@ -41,6 +43,16 @@ export default function ServicesScreen() {
   const [serviceToEdit, setServiceToEdit] = useState<Service | null>(null);
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (categoryId) {
+      const parsed = parseInt(categoryId as string, 10);
+      if (!isNaN(parsed) && !selectedCategoryIds.includes(parsed)) {
+        setSelectedCategoryIds([parsed]);
+      }
+    }
+  }, [categoryId]);
+
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [categorySearchText, setCategorySearchText] = useState('');
 

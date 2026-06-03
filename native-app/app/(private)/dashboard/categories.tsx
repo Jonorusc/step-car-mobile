@@ -16,6 +16,7 @@ import { useSession } from '@/hooks/useSession';
 import { useCategoryList, useDeleteCategory, Category } from '@/hooks/useCategory';
 import { Theme } from '@/constants/theme';
 import EditCategoryModal from '@/components/EditCategoryModal';
+import { useRouter } from 'expo-router';
 
 // Simple useDebounce inline
 function useDebounce<T>(value: T, delay: number): T {
@@ -31,6 +32,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function CategoriesScreen() {
   const { activeEstablishment } = useSession();
+  const router = useRouter();
   const systemColor = Theme.colors.primary;
 
   const [search, setSearch] = useState('');
@@ -145,6 +147,15 @@ export default function CategoriesScreen() {
       </View>
 
       <View style={styles.cardFooter}>
+        <TouchableOpacity 
+          style={styles.actionBtn}
+          onPress={() => router.push(`/(private)/dashboard/services?categoryId=${item.id}`)}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons name="build" size={16} color="#475569" />
+          <Text style={styles.actionBtnText}>Ver Serviços</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={styles.actionBtn}
           onPress={() => handleEdit(item)}

@@ -20,6 +20,7 @@ import { useSession } from '@/hooks/useSession';
 import { BackendEstablishment } from '@/hooks/useEstablishments';
 import { getSafeErrorMessage } from '@/utils/errorMessages';
 import { validatePlate } from '@/utils/validation';
+import { formatCurrencyBRL, formatPlateInput, formatPlateDisplay, unformatPlate } from '@/utils/formatters';
 
 interface Service {
   id: number;
@@ -152,7 +153,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
     setDiscountCents(cents);
 
     // Format BRL
-    const formatted = `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+    const formatted = formatCurrencyBRL(cents);
     setDiscountStr(formatted);
   };
 
@@ -232,7 +233,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
           category_id: s.category_id
         })),
         companyId: selectedCompany?.id || null,
-        plate: plate.toUpperCase(),
+        plate: unformatPlate(plate),
         model: model,
         color: color,
         discount: discountCents,
@@ -317,7 +318,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                     style={[styles.input, styles.plateInput]}
                     placeholder="ABC1D23"
                     value={plate}
-                    onChangeText={(val) => setPlate(val.toUpperCase().slice(0, 7))}
+                    onChangeText={(val) => setPlate(formatPlateInput(val))}
                     autoCapitalize="characters"
                     autoCorrect={false}
                   />
@@ -443,7 +444,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                                       {svc.name}
                                     </Text>
                                     <Text style={[styles.serviceRowPrice, isSelected ? styles.serviceRowPriceSelected : null]}>
-                                      R$ {(svc.price / 100).toFixed(2).replace('.', ',')}
+                                      {formatCurrencyBRL(svc.price)}
                                     </Text>
                                   </View>
                                   
@@ -478,7 +479,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                 <View style={styles.accumulatedBox}>
                   <Text style={styles.accumulatedLabel}>Subtotal Acumulado:</Text>
                   <Text style={styles.accumulatedVal}>
-                    R$ {(getSubtotal() / 100).toFixed(2).replace('.', ',')}
+                    {formatCurrencyBRL(getSubtotal())}
                   </Text>
                 </View>
               </View>
@@ -541,7 +542,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                     <View style={styles.invoicePlateHeader}>
                       <Text style={styles.invoicePlateHeaderText}>BRASIL</Text>
                     </View>
-                    <Text style={styles.invoicePlateVal}>{plate.toUpperCase()}</Text>
+                    <Text style={styles.invoicePlateVal}>{formatPlateDisplay(plate)}</Text>
                   </View>
 
                   <View style={styles.invoiceMeta}>
@@ -573,7 +574,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                       <View key={svc.id} style={styles.invoiceSvcRow}>
                         <Text style={styles.invoiceSvcName}>• {svc.name} {svc.quantity > 1 ? `(x${svc.quantity})` : ''}</Text>
                         <Text style={styles.invoiceSvcPrice}>
-                          R$ {((svc.price * svc.quantity) / 100).toFixed(2).replace('.', ',')}
+                          {formatCurrencyBRL(svc.price * svc.quantity)}
                         </Text>
                       </View>
                     ))}
@@ -583,7 +584,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                     <View style={styles.invoicePricingRow}>
                       <Text style={styles.invoicePriceLabel}>Subtotal:</Text>
                       <Text style={styles.invoicePriceValue}>
-                        R$ {(getSubtotal() / 100).toFixed(2).replace('.', ',')}
+                        {formatCurrencyBRL(getSubtotal())}
                       </Text>
                     </View>
                     
@@ -591,7 +592,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                       <View style={styles.invoicePricingRow}>
                         <Text style={styles.invoicePriceLabel}>Desconto:</Text>
                         <Text style={[styles.invoicePriceValue, { color: '#ef4444' }]}>
-                          -R$ {(discountCents / 100).toFixed(2).replace('.', ',')}
+                          - {formatCurrencyBRL(discountCents)}
                         </Text>
                       </View>
                     )}
@@ -599,7 +600,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                     <View style={[styles.invoicePricingRow, styles.invoiceGrandTotalRow]}>
                       <Text style={styles.invoiceTotalLabel}>Valor Final:</Text>
                       <Text style={styles.invoiceTotalValue}>
-                        R$ {(getNetPrice() / 100).toFixed(2).replace('.', ',')}
+                        {formatCurrencyBRL(getNetPrice())}
                       </Text>
                     </View>
                   </View>
@@ -732,6 +733,7 @@ const styles = StyleSheet.create({
   },
   viewportContent: {
     padding: 24,
+    paddingBottom: 150,
   },
   stepContainer: {
     width: '100%',

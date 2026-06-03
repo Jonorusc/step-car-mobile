@@ -16,13 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Theme } from '@/constants/theme';
 import { useSession } from '@/hooks/useSession';
 import { useDashboardMetrics, MonthlyData } from '@/hooks/useDashboard';
-
-const formatCurrency = (value: number | string | undefined | null) => {
-  if (value === undefined || value === null) return 'R$ 0,00';
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return 'R$ 0,00';
-  return (num / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
+import { formatCurrencyBRL as formatCurrency } from '@/utils/formatters';
 
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('pt-BR');

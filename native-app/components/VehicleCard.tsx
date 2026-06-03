@@ -5,6 +5,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { Vehicle } from '@/hooks/useVehicles';
 import { Theme } from '@/constants/theme';
+import { formatCurrencyBRL, formatPlateDisplay } from '@/utils/formatters';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -25,8 +26,7 @@ export default function VehicleCard({
   isPrinting = false,
   systemColor = Theme.colors.primary 
 }: VehicleCardProps) {
-  const netPrice = (vehicle.price - vehicle.discount) / 100;
-  const netPriceFormatted = `R$ ${netPrice.toFixed(2).replace('.', ',')}`;
+  const netPriceFormatted = formatCurrencyBRL(vehicle.price - vehicle.discount);
 
   // Lógica visual para a cor da bolinha
   const getBadgeColor = (colorName: string) => {
@@ -36,6 +36,11 @@ export default function VehicleCard({
     if (c === 'prata' || c === 'cinza') return '#94A3B8';
     if (c === 'vermelho') return '#EF4444';
     if (c === 'azul') return '#3B82F6';
+    if (c === 'verde') return '#10B981';
+    if (c === 'amarelo') return '#EAB308';
+    if (c === 'laranja') return '#F97316';
+    if (c === 'roxo') return '#8B5CF6';
+    if (c === 'marrom') return '#8B4513';
     return '#CBD5E1';
   };
 
@@ -69,7 +74,7 @@ export default function VehicleCard({
               </View>
             </View>
             <View style={styles.plateBadge}>
-              <Text style={styles.plateText}>{vehicle.plate.toUpperCase()}</Text>
+              <Text style={styles.plateText}>{formatPlateDisplay(vehicle.plate)}</Text>
             </View>
           </View>
 
@@ -97,7 +102,7 @@ export default function VehicleCard({
             {vehicle.discount > 0 && (
               <View style={styles.rowBetween}>
                 <Text style={styles.labelText}>Desconto Aplicado:</Text>
-                <Text style={styles.discountText}>- R$ {(vehicle.discount / 100).toFixed(2).replace('.', ',')}</Text>
+                <Text style={styles.discountText}>- {formatCurrencyBRL(vehicle.discount)}</Text>
               </View>
             )}
           </View>
