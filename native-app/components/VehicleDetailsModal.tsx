@@ -12,6 +12,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { Theme } from '@/constants/theme';
+import { formatCurrencyBRL, formatPlateDisplay } from '@/utils/formatters';
 
 interface VehicleDetailsModalProps {
   visible: boolean;
@@ -60,7 +61,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                   <View style={styles.invoicePlateHeader}>
                     <Text style={styles.invoicePlateHeaderText}>BRASIL</Text>
                   </View>
-                  <Text style={styles.invoicePlateVal}>{fullVehicle.vehicle.plate?.toUpperCase()}</Text>
+                  <Text style={styles.invoicePlateVal}>{formatPlateDisplay(fullVehicle.vehicle.plate || '')}</Text>
                 </View>
 
                 <View style={styles.invoiceMeta}>
@@ -89,7 +90,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                         <Text style={styles.invoiceSvcCat}>{svc.category_name}</Text>
                       </View>
                       <Text style={styles.invoiceSvcPrice}>
-                        R$ {((svc.price * svc.quantity) / 100).toFixed(2).replace('.', ',')}
+                        {formatCurrencyBRL(svc.price * svc.quantity)}
                       </Text>
                     </View>
                   ))}
@@ -102,7 +103,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                   <View style={styles.invoicePricingRow}>
                     <Text style={styles.invoicePriceLabel}>Subtotal:</Text>
                     <Text style={styles.invoicePriceValue}>
-                      R$ {(getSubtotal() / 100).toFixed(2).replace('.', ',')}
+                      {formatCurrencyBRL(getSubtotal())}
                     </Text>
                   </View>
                   
@@ -110,7 +111,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                     <View style={styles.invoicePricingRow}>
                       <Text style={styles.invoicePriceLabel}>Desconto:</Text>
                       <Text style={[styles.invoicePriceValue, { color: '#ef4444' }]}>
-                        -R$ {(fullVehicle.vehicle.discount / 100).toFixed(2).replace('.', ',')}
+                        - {formatCurrencyBRL(fullVehicle.vehicle.discount)}
                       </Text>
                     </View>
                   )}
@@ -118,7 +119,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                   <View style={[styles.invoicePricingRow, styles.invoiceGrandTotalRow]}>
                     <Text style={styles.invoiceTotalLabel}>Valor Final:</Text>
                     <Text style={styles.invoiceTotalValue}>
-                      R$ {(Math.max(0, getSubtotal() - fullVehicle.vehicle.discount) / 100).toFixed(2).replace('.', ',')}
+                      {formatCurrencyBRL(Math.max(0, getSubtotal() - fullVehicle.vehicle.discount))}
                     </Text>
                   </View>
                 </View>
