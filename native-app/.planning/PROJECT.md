@@ -1,5 +1,13 @@
 # Project: StepCar Native Mobile App
 
+## Current Milestone: v4.0 Permissions & Employee Login
+
+**Goal:** Implement a permissions system in the native app mimicking web-stepcar, restricting edit/delete actions for employees, and adjusting the login flow to support employee authentication.
+
+**Target features:**
+- Employee Login Flow (support email/password login for employees)
+- Roles & Permissions (Hide delete/update actions on CRUD screens for employees)
+
 ## What This Is
 
 StepCar is a fully native mobile application converted from the StepCar Web Dashboard. It integrates directly with the StepCar API to provide a high-performance, offline-ready native experience for vehicle wash and parking management.
@@ -16,6 +24,8 @@ To provide an ultra-fast, premium native registration flow for vehicles and a se
 
 ### Active
 
+- [ ] **Employee Login Flow**: Adapt the authentication screens to support email/password login for employees (`type_user === 'EMPLOYEE'`).
+- [ ] **Roles & Permissions**: Apply conditional rendering across all CRUD modules to hide delete, update, and creation actions if the authenticated user is an employee, replicating the `web-stepcar` logic.
 - [ ] **Establishment Selection & Standalone Flow**: A dedicated establishment selection screen `/establishments` shown on startup if no establishment is selected. Selecting an establishment persists the choice and redirects the user to the main dashboard.
 - [ ] **Web-Style Sidebar Drawer**: A beautiful sliding drawer menu on the left side of the dashboard, styled with the premium white design pattern from the web app:
   - White background (`#ffffff`) with right border.
@@ -61,7 +71,24 @@ To provide an ultra-fast, premium native registration flow for vehicles and a se
 | **Custom ESC/POS Chunking** | Raw byte transmission over BLE requires chunking into 20-byte payloads to support legacy thermal printers.                | — Validated |
 
 - Always check how is being done in the webstecar repo (web-stepcar) before building a new feature for mobile app
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
 
-_Last updated: 2026-05-27 after mobile-first UX optimization directive_
-
+_Last updated: 2026-06-08 after starting milestone v4.0 Permissions & Employee Login_

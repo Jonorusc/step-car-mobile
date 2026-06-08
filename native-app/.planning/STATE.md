@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-27)
+See: .planning/PROJECT.md (updated 2026-06-08)
 
 **Core value:** To provide an ultra-fast, premium native registration flow for vehicles and a seamless, bulletproof Bluetooth thermal printing experience that matches the layout, white design pattern, and operational convenience of the web application.
-**Current focus:** Phase 3: Registro & Vehicles CRUD
+**Current focus:** Milestone v4.0: Permissions & Employee Login
 
 ## Current Position
 
-Phase: 3 of 6 (Registro & Vehicles CRUD)
-Plan: 0 of 3 in current phase
-Status: Ready for planning
-Last activity: 2026-05-27 — Successfully completed and verified Phase 2 (standalone establishments selection and premium white web-style navigation drawer), bringing all unit and trigger tests to 100% green.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-08 — Milestone v4.0 started
 
-Progress: [████░░░░░░] 40%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

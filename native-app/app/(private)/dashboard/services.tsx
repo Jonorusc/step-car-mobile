@@ -14,10 +14,12 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
+import { useUser } from '@/hooks/useAuth';
 import { useServiceList, useDeleteService, Service } from '@/hooks/useService';
 import { useCategoryList } from '@/hooks/useCategory';
 import { Theme } from '@/constants/theme';
 import EditServiceModal from '@/components/EditServiceModal';
+import LoadingLogo from '@/components/LoadingLogo';
 import { useLocalSearchParams } from 'expo-router';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -33,6 +35,8 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function ServicesScreen() {
   const { activeEstablishment } = useSession();
+  const user = useUser();
+  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
   const systemColor = Theme.colors.primary;
   const { categoryId } = useLocalSearchParams();
 
@@ -132,7 +136,7 @@ export default function ServicesScreen() {
     if (isLoading) {
       return (
         <View style={styles.emptyCard}>
-          <ActivityIndicator size="large" color={systemColor} style={{ marginBottom: 12 }} />
+          <LoadingLogo size={50} />
           <Text style={styles.emptyTitle}>Carregando serviços...</Text>
         </View>
       );
@@ -186,23 +190,27 @@ export default function ServicesScreen() {
       </View>
 
       <View style={styles.cardFooter}>
-        <TouchableOpacity 
-          style={styles.actionBtn}
-          onPress={() => handleEdit(item)}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="edit" size={16} color="#475569" />
-          <Text style={styles.actionBtnText}>Editar</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => handleEdit(item)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="edit" size={16} color="#475569" />
+            <Text style={styles.actionBtnText}>Editar</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity 
-          style={[styles.actionBtn, styles.actionBtnDanger]}
-          onPress={() => handleDeleteConfirm(item)}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="delete" size={16} color="#ef4444" />
-          <Text style={styles.actionBtnDangerText}>Excluir</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.actionBtnDanger]}
+            onPress={() => handleDeleteConfirm(item)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="delete" size={16} color="#ef4444" />
+            <Text style={styles.actionBtnDangerText}>Excluir</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -245,9 +253,11 @@ export default function ServicesScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
-            <MaterialIcons name="add" size={24} color="#ffffff" />
-          </TouchableOpacity>
+          {!isEmployee && (
+            <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
+              <MaterialIcons name="add" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

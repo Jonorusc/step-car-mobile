@@ -21,14 +21,18 @@ import api from '@/utils/api';
 import VehicleCard from '@/components/VehicleCard';
 import EditVehicleWizard from '@/components/EditVehicleWizard';
 import VehicleDetailsModal from '@/components/VehicleDetailsModal';
+import LoadingLogo from '@/components/LoadingLogo';
 import { Theme } from '@/constants/theme';
 import { useCouponBuilder } from '@/hooks/useCouponBuilder';
 import useBLE from '@/hooks/useBLE';
 import { useVehicles, Vehicle } from '@/hooks/useVehicles';
+import { useUser } from '@/hooks/useAuth';
 
 export default function VehiclesScreen() {
   const queryClient = useQueryClient();
   const { activeEstablishment } = useSession();
+  const user = useUser();
+  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
   const { print, isConnected } = useBLE();
   const { buildCouponData } = useCouponBuilder();
   const systemColor = Theme.colors.primary;
@@ -194,7 +198,7 @@ export default function VehiclesScreen() {
     if (isLoading) {
       return (
         <View style={styles.emptyCard}>
-          <ActivityIndicator size="large" color={systemColor} style={{ marginBottom: 12 }} />
+          <LoadingLogo size={50} />
           <Text style={styles.emptyTitle}>Carregando veículos...</Text>
         </View>
       );
@@ -322,8 +326,8 @@ export default function VehiclesScreen() {
           <VehicleCard
             vehicle={item}
             onPrint={handlePrintReceipt}
-            onDelete={handleDeleteConfirm}
-            onEdit={handleEdit}
+            onDelete={isEmployee ? undefined : handleDeleteConfirm}
+            onEdit={isEmployee ? undefined : handleEdit}
             onViewDetails={handleViewDetails}
             isPrinting={printingId === item.id}
             systemColor={systemColor}

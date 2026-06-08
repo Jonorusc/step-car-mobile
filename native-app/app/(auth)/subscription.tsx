@@ -25,7 +25,8 @@ export default function SubscriptionScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       // Direct them to the main website to complete subscription payment
-      await WebBrowser.openBrowserAsync('https://stepcar.com.br');
+      const webUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://stepcar.com.br';
+      await WebBrowser.openBrowserAsync(webUrl);
     } catch (error) {
       logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir o link de assinatura.');

@@ -17,6 +17,7 @@ import { Theme } from '@/constants/theme';
 import { useSession } from '@/hooks/useSession';
 import { useDashboardMetrics, MonthlyData } from '@/hooks/useDashboard';
 import { formatCurrencyBRL as formatCurrency } from '@/utils/formatters';
+import LoadingLogo from '@/components/LoadingLogo';
 
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('pt-BR');
@@ -141,7 +142,7 @@ export default function FinanceiroScreen() {
 
         {isLoading && !data ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={Theme.colors.primary} />
+            <LoadingLogo size={50} />
           </View>
         ) : data ? (
           <View style={styles.metricsContainer}>

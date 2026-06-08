@@ -39,8 +39,9 @@ interface Category {
 
 interface Company {
   id: number;
-  name: string;
-  cnpj: string;
+  company_name: string;
+  fantasy_name: string;
+  cnpj?: string;
 }
 
 interface EditVehicleWizardProps {
@@ -77,6 +78,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [discountStr, setDiscountStr] = useState('');
   const [discountCents, setDiscountCents] = useState(0);
 
@@ -122,16 +124,18 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
   });
 
   const { data: companies = [] } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['wizard_companies_list', activeEstablishment?.id],
     queryFn: async () => {
-      const res = await api.get('/user/company/list');
+      const res = await api.get('/user/company/list', {
+        params: { establishmentId: activeEstablishment?.id, limitPerPage: 100, page: 1 }
+      });
       const payload = res.data?.data;
       if (Array.isArray(payload)) return payload;
       if (payload && Array.isArray(payload.data)) return payload.data;
       if (res.data && Array.isArray(res.data.data)) return res.data.data;
       return [];
     },
-    enabled: visible,
+    enabled: !!activeEstablishment,
   });
 
   // Populate data when fullVehicle loads
@@ -546,32 +550,48 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Empresa Conveniada (Opcional)</Text>
-                  <View style={styles.companySelectGrid}>
-                    <TouchableOpacity
-                      style={[styles.companyCard, selectedCompany === null ? styles.companyCardSelected : null]}
-                      onPress={() => setSelectedCompany(null)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.companyCardText, selectedCompany === null ? styles.companyCardTextSelected : null]}>
-                        Nenhuma
-                      </Text>
-                    </TouchableOpacity>
-                    {companies.map((comp: Company) => {
-                      const isSelected = selectedCompany?.id === comp.id;
-                      return (
+                  <TouchableOpacity
+                    style={styles.dropdownToggle}
+                    onPress={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.dropdownToggleText, !selectedCompany && { color: '#94a3b8' }]}>
+                      {selectedCompany ? (selectedCompany.fantasy_name || selectedCompany.company_name) : 'Selecione uma empresa'}
+                    </Text>
+                    <MaterialIcons name={showCompanyDropdown ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#64748b" />
+                  </TouchableOpacity>
+                  
+                  {showCompanyDropdown && (
+                    <View style={styles.dropdownList}>
+                      <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
                         <TouchableOpacity
-                          key={comp.id}
-                          style={[styles.companyCard, isSelected ? styles.companyCardSelected : null]}
-                          onPress={() => setSelectedCompany(comp)}
-                          activeOpacity={0.7}
+                          style={[styles.dropdownItem, selectedCompany === null && styles.dropdownItemSelected]}
+                          onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(false); }}
                         >
-                          <Text style={[styles.companyCardText, isSelected ? styles.companyCardTextSelected : null]} numberOfLines={1}>
-                            {comp.name}
+                          <Text style={[styles.dropdownItemText, selectedCompany === null && styles.dropdownItemTextSelected]}>
+                            Nenhuma
                           </Text>
+                          {selectedCompany === null && <MaterialIcons name="check" size={20} color="#0f172a" />}
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                        
+                        {companies.map((comp: Company) => {
+                          const isSelected = selectedCompany?.id === comp.id;
+                          return (
+                            <TouchableOpacity
+                              key={comp.id}
+                              style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                              onPress={() => { setSelectedCompany(comp); setShowCompanyDropdown(false); }}
+                            >
+                              <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]} numberOfLines={1}>
+                                {comp.fantasy_name || comp.company_name}
+                              </Text>
+                              {isSelected && <MaterialIcons name="check" size={20} color="#0f172a" />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -618,7 +638,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                     {selectedCompany && (
                       <View style={styles.invoiceMetaRow}>
                         <Text style={styles.invoiceMetaLabel}>Convênio:</Text>
-                        <Text style={styles.invoiceMetaVal}>{selectedCompany.name}</Text>
+                        <Text style={styles.invoiceMetaVal}>{selectedCompany.fantasy_name || selectedCompany.company_name}</Text>
                       </View>
                     )}
                   </View>
@@ -863,7 +883,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   categoryCard: {
-    width: '47%',
+    width: '46%',
     aspectRatio: 1.1,
     borderWidth: 2,
     borderColor: '#e2e8f0',
@@ -991,30 +1011,49 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0f172a',
   },
-  companySelectGrid: {
+  dropdownToggle: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  companyCard: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+  },
+  dropdownToggleText: {
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  dropdownList: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
     backgroundColor: '#ffffff',
+    overflow: 'hidden',
   },
-  companyCardSelected: {
-    borderColor: '#0f172a',
-    backgroundColor: '#0f172a',
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  companyCardText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
+  dropdownItemSelected: {
+    backgroundColor: '#f8fafc',
   },
-  companyCardTextSelected: {
-    color: '#ffffff',
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#334155',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    fontWeight: '700',
+    color: '#0f172a',
   },
   invoiceCard: {
     backgroundColor: '#ffffff',

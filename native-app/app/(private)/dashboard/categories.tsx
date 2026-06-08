@@ -13,9 +13,11 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
+import { useUser } from '@/hooks/useAuth';
 import { useCategoryList, useDeleteCategory, Category } from '@/hooks/useCategory';
 import { Theme } from '@/constants/theme';
 import EditCategoryModal from '@/components/EditCategoryModal';
+import LoadingLogo from '@/components/LoadingLogo';
 import { useRouter } from 'expo-router';
 
 // Simple useDebounce inline
@@ -32,6 +34,8 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function CategoriesScreen() {
   const { activeEstablishment } = useSession();
+  const user = useUser();
+  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
   const router = useRouter();
   const systemColor = Theme.colors.primary;
 
@@ -103,7 +107,7 @@ export default function CategoriesScreen() {
     if (isLoading) {
       return (
         <View style={styles.emptyCard}>
-          <ActivityIndicator size="large" color={systemColor} style={{ marginBottom: 12 }} />
+          <LoadingLogo size={50} />
           <Text style={styles.emptyTitle}>Carregando categorias...</Text>
         </View>
       );
@@ -156,23 +160,27 @@ export default function CategoriesScreen() {
           <Text style={styles.actionBtnText}>Ver Serviços</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.actionBtn}
-          onPress={() => handleEdit(item)}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="edit" size={16} color="#475569" />
-          <Text style={styles.actionBtnText}>Editar</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => handleEdit(item)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="edit" size={16} color="#475569" />
+            <Text style={styles.actionBtnText}>Editar</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity 
-          style={[styles.actionBtn, styles.actionBtnDanger]}
-          onPress={() => handleDeleteConfirm(item)}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons name="delete" size={16} color="#ef4444" />
-          <Text style={styles.actionBtnDangerText}>Excluir</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.actionBtnDanger]}
+            onPress={() => handleDeleteConfirm(item)}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="delete" size={16} color="#ef4444" />
+            <Text style={styles.actionBtnDangerText}>Excluir</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -200,9 +208,11 @@ export default function CategoriesScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
-            <MaterialIcons name="add" size={24} color="#ffffff" />
-          </TouchableOpacity>
+          {!isEmployee && (
+            <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
+              <MaterialIcons name="add" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

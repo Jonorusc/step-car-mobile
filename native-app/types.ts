@@ -23,4 +23,5 @@ export type Establishment = {
 
 export type Coupon = {
     info?: string | null;
+    print_qrcode?: string | number | boolean | null;
 };

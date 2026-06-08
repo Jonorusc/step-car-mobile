@@ -55,31 +55,6 @@ const formatCNPJ = (cnpj: string) => {
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 };
 
-const buildQRCodeCommandFromObject = (data: { username: string; password: string }): string => {
-    // Serialize the data object to a JSON string
-    const jsonData = JSON.stringify(data);
-
-    let cmd = '';
-
-    // Center alignment for QR code
-    cmd += setAlignment('center');
-
-    // Set QR code model, size, and error correction level
-    cmd += setQRModel(2); // Model 2
-    cmd += setQRSize(6); // Module size (adjust as needed)
-    cmd += setQRErrorCorrection(49); // Error correction level M
-
-    // Store QR code data
-    cmd += storeQRData(jsonData);
-
-    // Print the QR code
-    cmd += printStoredQR();
-
-    cmd += breakLine();
-
-    return cmd;
-};
-
 const initializePrinter = () => `${ESC}@`;
 
 const encodeText = (text: string) => Buffer.from(text, 'utf-8');
@@ -277,6 +252,25 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     partsText?.forEach((value, index) => {
         push(String(`${value}\n`).trim());
     });
+    push(breakLine(1));
+
+    if (data?.establishment?.coupon?.print_qrcode || data?.establishment?.coupon?.print_qrcode === 1 || data?.establishment?.coupon?.print_qrcode === 'sim') {
+        push(setAlignment('center'));   // Centraliza
+        push(setBold(true));
+        push('Detalhes do serviço via QR code\n');
+        push(setBold(false));
+        push(breakLine(1));
+
+        const webUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://stepcar.com.br';
+        const siteUrl = `${webUrl}/vehicle/receipt/${data.vehicleToCupom.id}`;
+
+        push(setQRModel(2));             // Modelo 2
+        push(setQRSize(6));              // Tamanho (1 a 16)
+        push(setQRErrorCorrection(49));  // Correção: 48=L, 49=M, 50=Q, 51=H
+        push(storeQRData(siteUrl));      // Armazena os dados (sua URL)
+        push(printStoredQR());           // Imprime o QR Code
+        push(breakLine(1));
+    }
 
     push(feedPaper(3)); // Aumenta o avanço de papel
     push(cutPaper()); // Adiciona corte

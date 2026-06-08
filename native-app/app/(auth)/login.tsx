@@ -14,13 +14,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../hooks/useAuth';
-import { validateEmail, validatePassword } from '../../utils/validation';
+import { validatePassword } from '../../utils/validation';
 import { checkRateLimit, recordAttempt, resetAttempts } from '../../utils/rateLimiter';
 import { getSafeErrorMessage } from '../../utils/errorMessages';
 import * as WebBrowser from 'expo-web-browser';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import logger from '../../utils/logger';
+
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://stepcar.com.br';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -48,8 +50,8 @@ export default function LoginScreen() {
     setEmailError('');
     setPasswordError('');
 
-    if (!validateEmail(email)) {
-      setEmailError('Por favor, insira um e-mail válido.');
+    if (email.trim().length === 0) {
+      setEmailError('Por favor, insira um e-mail ou registro válido.');
       hasError = true;
     }
 
@@ -82,7 +84,7 @@ export default function LoginScreen() {
   const handleForgotPassword = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await WebBrowser.openBrowserAsync('https://stepcar.com.br');
+      await WebBrowser.openBrowserAsync(WEB_URL);
     } catch (error) {
       logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir o link de recuperação de senha.');
@@ -93,7 +95,7 @@ export default function LoginScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       // Redirect to the web registration page
-      await WebBrowser.openBrowserAsync('https://stepcar.com.br/sign-up');
+      await WebBrowser.openBrowserAsync(`${WEB_URL}/sign-up`);
     } catch (error) {
       logger.error('Failed to open WebBrowser:', error);
       Alert.alert('Erro', 'Não foi possível abrir a página de cadastro.');
@@ -131,7 +133,7 @@ export default function LoginScreen() {
                 placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
-                keyboardType="email-address"
+                keyboardType="default"
                 autoCapitalize="none"
                 autoCorrect={false}
               />

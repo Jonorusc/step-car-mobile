@@ -16,13 +16,17 @@ import * as Haptics from 'expo-haptics';
 
 import { Theme } from '@/constants/theme';
 import { useSession } from '@/hooks/useSession';
+import { useUser } from '@/hooks/useAuth';
 import { useCompanyList, useDeleteCompany, Company } from '@/hooks/useCompany';
 
 import EditCompanyModal from '@/components/EditCompanyModal';
 import ReportModal from '@/components/ReportModal';
+import LoadingLogo from '@/components/LoadingLogo';
 
 export default function CompaniesScreen() {
   const { activeEstablishment } = useSession();
+  const user = useUser();
+  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -83,17 +87,19 @@ export default function CompaniesScreen() {
   const renderRightActions = (item: Company) => {
     return (
       <View style={styles.swipeActionsContainer}>
-        <TouchableOpacity
-          style={[styles.swipeActionBtn, { backgroundColor: Theme.colors.primary }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setSelectedCompany(item);
-            setShowEditModal(true);
-          }}
-        >
-          <MaterialIcons name="edit" size={20} color="#fff" />
-          <Text style={styles.swipeActionText}>Editar</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity
+            style={[styles.swipeActionBtn, { backgroundColor: Theme.colors.primary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSelectedCompany(item);
+              setShowEditModal(true);
+            }}
+          >
+            <MaterialIcons name="edit" size={20} color="#fff" />
+            <Text style={styles.swipeActionText}>Editar</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.swipeActionBtn, { backgroundColor: '#f59e0b' }]}
@@ -107,16 +113,18 @@ export default function CompaniesScreen() {
           <Text style={styles.swipeActionText}>Relatório</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.swipeActionBtn, { backgroundColor: '#ef4444' }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            handleDelete(item.id, item.fantasy_name || item.company_name);
-          }}
-        >
-          <MaterialIcons name="delete" size={20} color="#fff" />
-          <Text style={styles.swipeActionText}>Excluir</Text>
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity
+            style={[styles.swipeActionBtn, { backgroundColor: '#ef4444' }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleDelete(item.id, item.fantasy_name || item.company_name);
+            }}
+          >
+            <MaterialIcons name="delete" size={20} color="#fff" />
+            <Text style={styles.swipeActionText}>Excluir</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -138,17 +146,19 @@ export default function CompaniesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Empresas Parceiras</Text>
-        <TouchableOpacity 
-          style={styles.addBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setSelectedCompany(null);
-            setShowEditModal(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <MaterialIcons name="add" size={24} color="#ffffff" />
-        </TouchableOpacity>
+        {!isEmployee && (
+          <TouchableOpacity 
+            style={styles.addBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSelectedCompany(null);
+              setShowEditModal(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="add" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.searchContainer}>
@@ -169,7 +179,7 @@ export default function CompaniesScreen() {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Theme.colors.primary} />
+          <LoadingLogo size={50} />
         </View>
       ) : (
         <FlatList

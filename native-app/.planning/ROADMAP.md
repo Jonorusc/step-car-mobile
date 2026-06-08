@@ -13,6 +13,7 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [x] **Phase 5: Services CRUD Module** - Implement listing, creating, updating, and deleting of services.
 - [x] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
 - [x] **Phase 7: Financeiro Dashboard** - Implement financial dashboard with stats, metrics, and graphs based on a date range picker.
+- [ ] **Phase 8: Employee Login & Permissions** - Implement employee email login and restrict delete/edit/create actions.
 
 ---
 
@@ -106,6 +107,21 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [ ] 06-01: Build Companies list card screen and details modal.
 - [ ] 06-02: Implement Company Create, Edit, and Delete forms and mutations.
 
+### Phase 8: Employee Login & Permissions
+
+**Goal**: Support employee accounts with restricted edit/delete privileges natively.
+**Depends on**: Phase 6
+**Requirements**: EMP-01, EMP-02, EMP-03, EMP-04
+**Success Criteria**:
+1. Login flow accepts employees (`type_user === 'EMPLOYEE'`).
+2. Delete action is hidden across Vehicles, Categories, Services, Companies for employees.
+3. Edit action is hidden across Vehicles, Categories, Services, Companies for employees.
+4. Create action is hidden for Companies for employees.
+
+**Plans**:
+- [ ] 08-01: Adapt login flow and API hooks to accept Employee users and store role in Auth context.
+- [ ] 08-02: Implement UI conditional rendering (hide edit/delete/create where necessary) based on the user role.
+
 ---
 
 ## Progress
@@ -119,14 +135,14 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 | 5. Services CRUD Module            | 2/2            | Complete    | 2026-05-29 |
 | 6. Companies CRUD Module           | 3/3            | Complete    | 2026-05-29 |
 | 7. Financeiro Dashboard            | 2/2            | Complete    | 2026-05-29 |
+| 8. Employee Login & Permissions    | 0/2            | Pending     | -          |
 
 ---
 
 ## Next Steps
 
-1. **Phase 4: Categories CRUD Module** - Plan the listing, creation, modification, and deletion of service categories natively, designed as beautiful responsive mobile cards with clean sliding validation sheets.
-2. **Endpoint Mappings**: Integrate standard category operations (`GET /user/category/list`, `POST /user/category/create`, `PUT /user/category/update`, `DELETE /user/category/delete/{id}`) under React Query and invalidate caches gracefully to sync screens.
+1. **Phase 8: Employee Login & Permissions** - Implement the Employee Login & Permissions features to replicate the access control from the web platform.
 
 ---
 
-_Last updated: 2026-05-27_
+_Last updated: 2026-06-08_

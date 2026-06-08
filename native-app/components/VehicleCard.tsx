@@ -10,7 +10,7 @@ import { formatCurrencyBRL, formatPlateDisplay } from '@/utils/formatters';
 interface VehicleCardProps {
   vehicle: Vehicle;
   onPrint: (vehicle: Vehicle) => Promise<void> | void;
-  onDelete: (vehicle: Vehicle) => void;
+  onDelete?: (vehicle: Vehicle) => void;
   onEdit?: (vehicle: Vehicle) => void;
   onViewDetails?: (vehicle: Vehicle) => void;
   isPrinting?: boolean;
@@ -45,6 +45,8 @@ export default function VehicleCard({
   };
 
   const renderRightActions = () => {
+    if (!onEdit && !onDelete) return null;
+
     return (
       <View style={styles.swipeActionsContainer}>
         {onEdit && (
@@ -53,10 +55,12 @@ export default function VehicleCard({
             <Text style={styles.swipeActionText}>Editar</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.swipeActionDelete} onPress={() => onDelete(vehicle)} activeOpacity={0.8}>
-          <MaterialIcons name="delete-outline" size={24} color="#FFF" />
-          <Text style={styles.swipeActionText}>Excluir</Text>
-        </TouchableOpacity>
+        {onDelete && (
+          <TouchableOpacity style={styles.swipeActionDelete} onPress={() => onDelete(vehicle)} activeOpacity={0.8}>
+            <MaterialIcons name="delete-outline" size={24} color="#FFF" />
+            <Text style={styles.swipeActionText}>Excluir</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };

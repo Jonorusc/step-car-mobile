@@ -40,14 +40,15 @@ interface Category {
 
 interface Company {
   id: number;
-  name: string;
-  cnpj: string;
+  company_name: string;
+  fantasy_name: string;
+  cnpj?: string;
 }
 
 interface RegistroWizardProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (createdVehicle: any) => void;
+  onSuccess: (createdVehicle: any, shouldPrint: boolean) => void;
 }
 
 export default function RegistroWizard({ visible, onClose, onSuccess }: RegistroWizardProps) {
@@ -77,6 +78,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [discountStr, setDiscountStr] = useState(''); // Formatted as currency BRL string
   const [discountCents, setDiscountCents] = useState(0);
 
@@ -98,8 +100,8 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
     queryKey: ['services', activeEstablishment?.id, selectedCategories.map(c => c.id).join(',')],
     queryFn: async () => {
       const categoryIdsParam = selectedCategories.map(c => c.id).join(',');
-      const res = await api.get('/user/service/list', { 
-        params: { establishmentId: activeEstablishment?.id, categoryIds: categoryIdsParam } 
+      const res = await api.get('/user/service/list', {
+        params: { establishmentId: activeEstablishment?.id, categoryIds: categoryIdsParam }
       });
       const payload = res.data?.data;
       if (Array.isArray(payload)) return payload;
@@ -111,16 +113,18 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
   });
 
   const { data: companies = [] } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['wizard_companies_list', activeEstablishment?.id],
     queryFn: async () => {
-      const res = await api.get('/user/company/list');
+      const res = await api.get('/user/company/list', {
+        params: { establishmentId: activeEstablishment?.id, limitPerPage: 100, page: 1 }
+      });
       const payload = res.data?.data;
       if (Array.isArray(payload)) return payload;
       if (payload && Array.isArray(payload.data)) return payload.data;
       if (res.data && Array.isArray(res.data.data)) return res.data.data;
       return [];
     },
-    enabled: visible,
+    enabled: !!activeEstablishment,
   });
 
   // Reset form when modal opens/closes
@@ -244,7 +248,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ['vehicles', activeEstablishment?.id] });
-      onSuccess(data.data);
+      onSuccess(data.data, shouldPrintOnSave);
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -253,8 +257,11 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
     },
   });
 
-  const handleSave = () => {
+  const [shouldPrintOnSave, setShouldPrintOnSave] = useState(false);
+
+  const handleSave = (print: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShouldPrintOnSave(print);
     createMutation.mutate();
   };
 
@@ -311,7 +318,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
             {currentStep === 1 && (
               <View style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Dados Básicos do Veículo</Text>
-                
+
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Placa</Text>
                   <TextInput
@@ -362,7 +369,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
             {currentStep === 2 && (
               <View style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Categorias</Text>
-                
+
                 {loadingCategories ? (
                   <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 40 }} />
                 ) : (
@@ -396,7 +403,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
               <View style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Selecione os Serviços</Text>
                 <Text style={styles.stepDesc}>Serviços das categorias: {selectedCategories.map(c => c.name).join(', ')}</Text>
-                
+
                 <View style={styles.searchContainer}>
                   <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
                   <TextInput
@@ -428,7 +435,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                         const cat = selectedCategories.find(c => c.id === catId);
                         const catName = cat ? cat.name : 'Outros';
                         const groupServices = grouped[catId];
-                        
+
                         if (groupServices.length === 0) return null;
 
                         return (
@@ -447,7 +454,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                                       {formatCurrencyBRL(svc.price)}
                                     </Text>
                                   </View>
-                                  
+
                                   <View style={styles.qtyControls}>
                                     <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty - 1)} style={styles.qtyBtn} activeOpacity={0.7} disabled={qty === 0}>
                                       <MaterialIcons name="remove" size={16} color={qty > 0 ? "#0f172a" : "#cbd5e1"} />
@@ -463,10 +470,10 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                           </View>
                         );
                       });
-                      
+
                       if (renderedGroups.every(g => g === null)) {
                         return (
-                          <Text style={{textAlign: 'center', color: '#64748b', marginTop: 20}}>
+                          <Text style={{ textAlign: 'center', color: '#64748b', marginTop: 20 }}>
                             Nenhum serviço encontrado para "{serviceSearch}"
                           </Text>
                         );
@@ -491,32 +498,48 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Empresa Conveniada (Opcional)</Text>
-                  <View style={styles.companySelectGrid}>
-                    <TouchableOpacity
-                      style={[styles.companyCard, selectedCompany === null ? styles.companyCardSelected : null]}
-                      onPress={() => setSelectedCompany(null)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.companyCardText, selectedCompany === null ? styles.companyCardTextSelected : null]}>
-                        Nenhuma
-                      </Text>
-                    </TouchableOpacity>
-                    {companies.map((comp: Company) => {
-                      const isSelected = selectedCompany?.id === comp.id;
-                      return (
+                  <TouchableOpacity
+                    style={styles.dropdownToggle}
+                    onPress={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.dropdownToggleText, !selectedCompany && { color: '#94a3b8' }]}>
+                      {selectedCompany ? (selectedCompany.fantasy_name || selectedCompany.company_name) : 'Selecione uma empresa'}
+                    </Text>
+                    <MaterialIcons name={showCompanyDropdown ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#64748b" />
+                  </TouchableOpacity>
+
+                  {showCompanyDropdown && (
+                    <View style={styles.dropdownList}>
+                      <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
                         <TouchableOpacity
-                          key={comp.id}
-                          style={[styles.companyCard, isSelected ? styles.companyCardSelected : null]}
-                          onPress={() => setSelectedCompany(comp)}
-                          activeOpacity={0.7}
+                          style={[styles.dropdownItem, selectedCompany === null && styles.dropdownItemSelected]}
+                          onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(false); }}
                         >
-                          <Text style={[styles.companyCardText, isSelected ? styles.companyCardTextSelected : null]} numberOfLines={1}>
-                            {comp.name}
+                          <Text style={[styles.dropdownItemText, selectedCompany === null && styles.dropdownItemTextSelected]}>
+                            Nenhuma
                           </Text>
+                          {selectedCompany === null && <MaterialIcons name="check" size={20} color="#0f172a" />}
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+
+                        {companies.map((comp: Company) => {
+                          const isSelected = selectedCompany?.id === comp.id;
+                          return (
+                            <TouchableOpacity
+                              key={comp.id}
+                              style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                              onPress={() => { setSelectedCompany(comp); setShowCompanyDropdown(false); }}
+                            >
+                              <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]} numberOfLines={1}>
+                                {comp.fantasy_name || comp.company_name}
+                              </Text>
+                              {isSelected && <MaterialIcons name="check" size={20} color="#0f172a" />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -535,7 +558,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
             {currentStep === 5 && (
               <View style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Resumo do Registro</Text>
-                
+
                 <View style={styles.invoiceCard}>
                   {/* License Plate Banner */}
                   <View style={styles.invoicePlate}>
@@ -563,7 +586,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                     {selectedCompany && (
                       <View style={styles.invoiceMetaRow}>
                         <Text style={styles.invoiceMetaLabel}>Convênio:</Text>
-                        <Text style={styles.invoiceMetaVal}>{selectedCompany.name}</Text>
+                        <Text style={styles.invoiceMetaVal}>{selectedCompany.fantasy_name || selectedCompany.company_name}</Text>
                       </View>
                     )}
                   </View>
@@ -587,7 +610,7 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                         {formatCurrencyBRL(getSubtotal())}
                       </Text>
                     </View>
-                    
+
                     {discountCents > 0 && (
                       <View style={styles.invoicePricingRow}>
                         <Text style={styles.invoicePriceLabel}>Desconto:</Text>
@@ -625,21 +648,32 @@ export default function RegistroWizard({ visible, onClose, onSuccess }: Registro
                 <MaterialIcons name="arrow-forward" size={16} color="#ffffff" style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={[styles.saveBtn, createMutation.isPending ? styles.saveBtnDisabled : null]}
-                onPress={handleSave}
-                activeOpacity={0.8}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <MaterialIcons name="print" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-                    <Text style={styles.saveBtnText}>Salvar e Imprimir</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 12, flex: 1 }}>
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: '#e2e8f0', flex: 1 }, createMutation.isPending ? styles.saveBtnDisabled : null]}
+                  onPress={() => handleSave(false)}
+                  activeOpacity={0.8}
+                  disabled={createMutation.isPending}
+                >
+                  <Text style={[styles.saveBtnText, { color: '#0f172a' }]}>Salvar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, { flex: 2 }, createMutation.isPending ? styles.saveBtnDisabled : null]}
+                  onPress={() => handleSave(true)}
+                  activeOpacity={0.8}
+                  disabled={createMutation.isPending}
+                >
+                  {createMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="print" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+                      <Text style={styles.saveBtnText}>Salvar e Imprimir Cupom</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -808,7 +842,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   categoryCard: {
-    width: '47%',
+    width: '46%',
     aspectRatio: 1.1,
     borderWidth: 2,
     borderColor: '#e2e8f0',
@@ -958,30 +992,49 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontWeight: '800',
   },
-  companySelectGrid: {
+  dropdownToggle: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
   },
-  companyCard: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 20,
+  dropdownToggleText: {
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  dropdownList: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
     backgroundColor: '#ffffff',
+    overflow: 'hidden',
   },
-  companyCardSelected: {
-    borderColor: '#6366f1',
-    backgroundColor: '#6366f1',
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  companyCardText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '600',
+  dropdownItemSelected: {
+    backgroundColor: '#f8fafc',
   },
-  companyCardTextSelected: {
-    color: '#ffffff',
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#334155',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    fontWeight: '700',
+    color: '#0f172a',
   },
   invoiceCard: {
     borderWidth: 1.5,

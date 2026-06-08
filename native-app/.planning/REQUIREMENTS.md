@@ -60,6 +60,13 @@
 - [ ] **COM-03**: Attendant can update existing companies using `PUT /user/company/update`.
 - [ ] **COM-04**: Attendant can delete companies using `DELETE /user/company/delete/{id}`.
 
+### Employee Permissions & Login (v4.0)
+
+- [ ] **EMP-01**: The login screen supports email and password authentication for users with `type_user === 'EMPLOYEE'`.
+- [ ] **EMP-02**: The UI conditionally hides the "Delete" action across Vehicles, Categories, Services, and Companies if `type_user === 'EMPLOYEE'`.
+- [ ] **EMP-03**: The UI conditionally hides the "Edit/Update" action across Vehicles, Categories, Services, and Companies if `type_user === 'EMPLOYEE'`.
+- [ ] **EMP-04**: The UI conditionally hides the "Create" action for Companies if `type_user === 'EMPLOYEE'`.
+
 ---
 
 ## Out of Scope
@@ -104,7 +111,11 @@
 | COM-02      | Phase 6: Companies CRUD Module           | Pending |
 | COM-03      | Phase 6: Companies CRUD Module           | Pending |
 | COM-04      | Phase 6: Companies CRUD Module           | Pending |
+| EMP-01      | Phase 7: Employee Login & Permissions    | Pending |
+| EMP-02      | Phase 7: Employee Login & Permissions    | Pending |
+| EMP-03      | Phase 7: Employee Login & Permissions    | Pending |
+| EMP-04      | Phase 7: Employee Login & Permissions    | Pending |
 
 ---
 
-_Last updated: 2026-05-27_
+_Last updated: 2026-06-08_

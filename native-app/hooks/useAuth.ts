@@ -169,8 +169,12 @@ export const useAuthStore = create<AuthState>((set) => ({
                     set({ user: null, isAuthenticated: false });
                 }
             }
-        } catch (error) {
-            logger.error('Failed to initialize session:', error);
+        } catch (error: any) {
+            if (error?.response?.status === 401) {
+                logger.warn('Session expired or invalid token (401).');
+            } else {
+                logger.error('Failed to initialize session:', error);
+            }
             await SecureStore.deleteItemAsync('access_token');
             await SecureStore.deleteItemAsync('refresh_token');
             set({ user: null, isAuthenticated: false });

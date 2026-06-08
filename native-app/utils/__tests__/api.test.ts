@@ -14,7 +14,7 @@ describe('API Client Core', () => {
 
     it('defines the custom api client', () => {
         expect(api).toBeDefined();
-        expect(api.defaults.baseURL).toBe('https://stepcarhomolog.com.br/api/v1');
+        expect(api.defaults.baseURL).toBe(process.env.EXPO_PUBLIC_API_URL);
     });
 
     it('injects access token interceptor handles secure reading', async () => {

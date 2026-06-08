@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -20,6 +21,7 @@ import RegistroWizard from '@/components/RegistroWizard';
 import EditVehicleWizard from '@/components/EditVehicleWizard';
 import VehicleDetailsModal from '@/components/VehicleDetailsModal';
 import VehicleCard from '@/components/VehicleCard';
+import LoadingLogo from '@/components/LoadingLogo';
 import { Theme } from '@/constants/theme';
 
 
@@ -37,27 +39,34 @@ const useRecentVehicles = (establishmentId?: number) => {
     queryFn: async () => {
       if (!establishmentId) return [];
 
-      const response = await api.get('/user/vehicle/list', {
-        params: {
-          establishmentId,
-          limitPerPage: 5,
-          page: 1,
-        }
+      const [resUnlinked, resLinked] = await Promise.all([
+        api.get('/user/vehicle/list', {
+          params: { establishmentId, limitPerPage: 5, page: 1, withCompany: 0 }
+        }),
+        api.get('/user/vehicle/list', {
+          params: { establishmentId, limitPerPage: 5, page: 1, withCompany: 1 }
+        })
+      ]);
+
+      const getArray = (response: any) => {
+        const payload = response.data?.data;
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        if (response.data && Array.isArray(response.data.data)) return response.data.data;
+        return [];
+      };
+
+      const unlinked = getArray(resUnlinked);
+      const linked = getArray(resLinked);
+
+      const allVehicles = [...unlinked, ...linked].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
       });
 
-      // Tratamento robusto para a resposta paginada do Laravel
-      const payload = response.data?.data;
-      let vehicles = [];
-      if (Array.isArray(payload)) {
-        vehicles = payload;
-      } else if (payload && Array.isArray(payload.data)) {
-        vehicles = payload.data;
-      } else if (response.data && Array.isArray(response.data.data)) {
-        vehicles = response.data.data;
-      }
-
       // Filtra os 5 mais recentes estritamente conforme a regra de negócio
-      return vehicles.slice(0, 5);
+      return allVehicles.slice(0, 5);
     },
     enabled: !!establishmentId,
     staleTime: 1000 * 60 * 2, // Cache de 2 minutos
@@ -90,7 +99,7 @@ export default function RegistroDashboard() {
   const [detailsVehicleId, setDetailsVehicleId] = useState<number | null>(null);
 
   // Busca isolada (apenas 5 itens, trigger on load)
-  const { data: vehicles, isLoading, error, refetch } = useRecentVehicles(activeEstablishment?.id);
+  const { data: vehicles, isLoading, error, refetch, isRefetching } = useRecentVehicles(activeEstablishment?.id);
 
   // Mutation de exclusão
   const deleteMutation = useMutation({
@@ -152,19 +161,23 @@ export default function RegistroDashboard() {
     setDetailsModalVisible(true);
   };
 
-  const handleWizardSuccess = async (createdVehicle: any) => {
+  const handleWizardSuccess = async (createdVehicle: any, shouldPrint: boolean) => {
     setWizardVisible(false);
     refetch(); // Atualiza a lista com o item recém-criado
 
-    if (isConnected) {
-      try {
-        const cupomData = await buildCouponData(createdVehicle.id);
-        if (cupomData) await print(cupomData);
-      } catch (err) {
-        Alert.alert('Aviso', 'Veículo salvo, mas ocorreu um erro ao imprimir.');
+    if (shouldPrint) {
+      if (isConnected) {
+        try {
+          const cupomData = await buildCouponData(createdVehicle.id);
+          if (cupomData) await print(cupomData);
+        } catch (err) {
+          Alert.alert('Aviso', 'Veículo salvo, mas ocorreu um erro ao imprimir.');
+        }
+      } else {
+        Alert.alert('Sucesso', 'Veículo registrado! Conecte a impressora para emitir cupom.');
       }
     } else {
-      Alert.alert('Sucesso', 'Veículo registrado! Conecte a impressora para emitir cupom.');
+      Alert.alert('Sucesso', 'Veículo registrado com sucesso!');
     }
   };
 
@@ -179,7 +192,7 @@ export default function RegistroDashboard() {
     if (isLoading) {
       return (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={systemColor} />
+          <LoadingLogo size={50} />
           <Text style={styles.emptyText}>Buscando veículos na base...</Text>
         </View>
       );
@@ -217,6 +230,9 @@ export default function RegistroDashboard() {
         data={vehicles}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.flatlistContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} colors={[systemColor]} />
+        }
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         renderItem={({ item }) => (
