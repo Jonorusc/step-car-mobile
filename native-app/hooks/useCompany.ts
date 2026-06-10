@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import api from '../utils/api';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -98,6 +98,26 @@ export const useCompanyList = (establishmentId: number, companyName: string | nu
     initialPageParam: 1,
     enabled: !!establishmentId,
     staleTime: 1000 * 60 * 2,
+  });
+};
+
+export interface CompanyIndicators {
+  total: number;
+  registeredThisMonth: number;
+  registeredThisWeek: number;
+  lastUpdate: string | null;
+}
+
+export const useCompanyIndicators = (establishmentId: number) => {
+  return useQuery<CompanyIndicators>({
+    queryKey: ['companyIndicators', establishmentId],
+    queryFn: async () => {
+      const { data } = await api.get(`/user/company/indicators`, {
+        params: { establishmentId }
+      });
+      return data.data;
+    },
+    enabled: !!establishmentId,
   });
 };
 

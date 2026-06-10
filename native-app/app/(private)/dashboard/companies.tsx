@@ -20,8 +20,10 @@ import { useUser } from '@/hooks/useAuth';
 import { useCompanyList, useDeleteCompany, Company } from '@/hooks/useCompany';
 
 import EditCompanyModal from '@/components/EditCompanyModal';
-import ReportModal from '@/components/ReportModal';
 import LoadingLogo from '@/components/LoadingLogo';
+import { useRouter } from 'expo-router';
+import CompanyIndicators from '@/components/CompanyIndicators';
+import CompanyVehiclesSheet from '@/components/CompanyVehiclesSheet';
 
 export default function CompaniesScreen() {
   const { activeEstablishment } = useSession();
@@ -33,9 +35,10 @@ export default function CompaniesScreen() {
 
   // Modals state
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  
+  const [showVehiclesSheet, setShowVehiclesSheet] = useState(false);
+
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const router = useRouter();
 
   // Debounce search input
   useEffect(() => {
@@ -102,15 +105,26 @@ export default function CompaniesScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.swipeActionBtn, { backgroundColor: '#f59e0b' }]}
+          style={[styles.swipeActionBtn, { backgroundColor: '#3b82f6' }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setSelectedCompany(item);
-            setShowReportModal(true);
+            setShowVehiclesSheet(true);
           }}
         >
-          <MaterialIcons name="assessment" size={20} color="#fff" />
-          <Text style={styles.swipeActionText}>Relatório</Text>
+          <MaterialIcons name="directions-car" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Veículos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.swipeActionBtn, { backgroundColor: '#6366f1' }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push(`/dashboard/companies/${item.id}/billings` as any);
+          }}
+        >
+          <MaterialIcons name="request-quote" size={20} color="#fff" />
+          <Text style={styles.swipeActionText} numberOfLines={1} adjustsFontSizeToFit>Fechamentos</Text>
         </TouchableOpacity>
 
         {!isEmployee && (
@@ -147,7 +161,7 @@ export default function CompaniesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Empresas Parceiras</Text>
         {!isEmployee && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addBtn}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -175,6 +189,14 @@ export default function CompaniesScreen() {
             <MaterialIcons name="close" size={20} color="#94a3b8" />
           </TouchableOpacity>
         )}
+      </View>
+
+      {activeEstablishment?.id && (
+        <CompanyIndicators establishmentId={activeEstablishment.id} />
+      )}
+
+      <View style={styles.listHeader}>
+        <Text style={styles.listTitle}>Empresas cadastradas</Text>
       </View>
 
       {isLoading ? (
@@ -221,11 +243,12 @@ export default function CompaniesScreen() {
         company={selectedCompany}
       />
 
-      {/* Report Modal */}
-      <ReportModal 
-        visible={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        company={selectedCompany}
+      {/* Vehicles Sheet */}
+      <CompanyVehiclesSheet
+        visible={showVehiclesSheet}
+        onClose={() => setShowVehiclesSheet(false)}
+        companyId={selectedCompany?.id || null}
+        companyName={selectedCompany?.fantasy_name || selectedCompany?.company_name || null}
       />
     </View>
   );
@@ -282,6 +305,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#0f172a',
   },
+  listHeader: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
   listContainer: {
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -331,12 +364,13 @@ const styles = StyleSheet.create({
   swipeActionBtn: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 70,
+    width: 60,
     height: '100%',
+    paddingHorizontal: 2,
   },
   swipeActionText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
     marginTop: 4,
   },
