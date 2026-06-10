@@ -1,12 +1,13 @@
 # Project: StepCar Native Mobile App
 
-## Current Milestone: v4.0 Permissions & Employee Login
+## Current Milestone: v5.0 Empresas Redesign & New Features
 
-**Goal:** Implement a permissions system in the native app mimicking web-stepcar, restricting edit/delete actions for employees, and adjusting the login flow to support employee authentication.
+**Goal:** Implement the new "Empresas" features in the native app, matching the recently redesigned companies module in web-stepcar (including the company main page summary and all the new endpoints).
 
 **Target features:**
-- Employee Login Flow (support email/password login for employees)
-- Roles & Permissions (Hide delete/update actions on CRUD screens for employees)
+- Integrate the native app with the new "empresas-redesign-new-features" endpoints.
+- Replicate the new company main page summary and screens from web-stepcar to the native mobile app.
+- Ensure the native app's "Empresas" CRUD flow matches the updated web-stepcar logic.
 
 ## What This Is
 
@@ -40,6 +41,7 @@ To provide an ultra-fast, premium native registration flow for vehicles and a se
   - **Veículos**: Listing, creating, updating, and deleting vehicles.
 - [ ] **Company Selection in Registration**: attachment of an associated company to a vehicle during registration using the `companyId` API field.
 - [ ] **Automated Coupon Printing**: Auto-connect and instant printing of receipt coupon via BLE upon successful vehicle registration.
+- [ ] **Empresas Redesign & Flow**: Update native app "Empresas" module to match web-stepcar redesign, including main page summary, full CRUD flow using new endpoints.
 
 ### Out of Scope
 
@@ -91,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-06-08 after starting milestone v4.0 Permissions & Employee Login_
+_Last updated: 2026-06-10 after starting milestone v5.0 Empresas Redesign & New Features_

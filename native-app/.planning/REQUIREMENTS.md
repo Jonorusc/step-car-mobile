@@ -67,6 +67,12 @@
 - [ ] **EMP-03**: The UI conditionally hides the "Edit/Update" action across Vehicles, Categories, Services, and Companies if `type_user === 'EMPLOYEE'`.
 - [ ] **EMP-04**: The UI conditionally hides the "Create" action for Companies if `type_user === 'EMPLOYEE'`.
 
+### Companies Redesign (v5.0)
+
+- [ ] **COM-05**: App integrates with the new `empresas-redesign-new-features` endpoints.
+- [ ] **COM-06**: Native app displays the new company main page summary mimicking web-stepcar.
+- [ ] **COM-07**: Native app "Empresas" CRUD flow matches the updated web-stepcar logic and design.
+
 ---
 
 ## Out of Scope
@@ -114,8 +120,11 @@
 | EMP-01      | Phase 7: Employee Login & Permissions    | Pending |
 | EMP-02      | Phase 7: Employee Login & Permissions    | Pending |
 | EMP-03      | Phase 7: Employee Login & Permissions    | Pending |
-| EMP-04      | Phase 7: Employee Login & Permissions    | Pending |
+| EMP-04      | Phase 8: Employee Login & Permissions    | Pending |
+| COM-05      | Phase 9: Empresas Redesign               | Pending |
+| COM-06      | Phase 9: Empresas Redesign               | Pending |
+| COM-07      | Phase 9: Empresas Redesign               | Pending |
 
 ---
 
-_Last updated: 2026-06-08_
+_Last updated: 2026-06-10_

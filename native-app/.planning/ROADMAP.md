@@ -14,6 +14,7 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [x] **Phase 6: Companies CRUD Module** - Implement listing, creating, updating, and deleting of partner companies.
 - [x] **Phase 7: Financeiro Dashboard** - Implement financial dashboard with stats, metrics, and graphs based on a date range picker.
 - [ ] **Phase 8: Employee Login & Permissions** - Implement employee email login and restrict delete/edit/create actions.
+- [ ] **Phase 9: Empresas Redesign** - Implement the new "Empresas" UI and integrate with new endpoints, matching web-stepcar redesign.
 
 ---
 
@@ -122,6 +123,21 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 - [ ] 08-01: Adapt login flow and API hooks to accept Employee users and store role in Auth context.
 - [ ] 08-02: Implement UI conditional rendering (hide edit/delete/create where necessary) based on the user role.
 
+### Phase 9: Empresas Redesign
+
+**Goal**: Match the web-stepcar redesign for the Empresas module, including main page summary and new endpoints.
+**Depends on**: Phase 6
+**Requirements**: COM-05, COM-06, COM-07
+**Success Criteria**:
+1. App successfully connects to the new `empresas-redesign-new-features` API endpoints.
+2. The Empresas main view matches the new summary page from the web application.
+3. The CRUD operations use the newly designed logic and layout.
+
+**Plans**:
+- [ ] 09-01: Update API hooks to use the new "empresas-redesign-new-features" endpoints.
+- [ ] 09-02: Implement the new Company main page summary view.
+- [ ] 09-03: Update the Company Create/Edit forms and lists to match the new web-stepcar redesign.
+
 ---
 
 ## Progress
@@ -136,13 +152,15 @@ This roadmap orchestrates the step-by-step transition of StepCar into a fully na
 | 6. Companies CRUD Module           | 3/3            | Complete    | 2026-05-29 |
 | 7. Financeiro Dashboard            | 2/2            | Complete    | 2026-05-29 |
 | 8. Employee Login & Permissions    | 0/2            | Pending     | -          |
+| 9. Empresas Redesign               | 0/3            | Pending     | -          |
 
 ---
 
 ## Next Steps
 
 1. **Phase 8: Employee Login & Permissions** - Implement the Employee Login & Permissions features to replicate the access control from the web platform.
+2. **Phase 9: Empresas Redesign** - Implement the new Companies flow and API integrations.
 
 ---
 
-_Last updated: 2026-06-08_
+_Last updated: 2026-06-10_
