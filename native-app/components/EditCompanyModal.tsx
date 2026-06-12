@@ -119,10 +119,6 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (!postalcode.trim() || !street.trim() || !neighborhood.trim() || !state.trim() || !city.trim() || !number.trim()) {
-        Alert.alert('Endereço Incompleto', 'Preencha todos os campos obrigatórios do endereço.');
-        return;
-      }
       setCurrentStep(3);
     }
   };
@@ -265,9 +261,9 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
 
             {currentStep === 2 && (
               <View>
-                <Text style={styles.sectionTitle}>Endereço da Sede</Text>
+                <Text style={styles.sectionTitle}>Endereço da Sede (Opcional)</Text>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>CEP *</Text>
+                  <Text style={styles.inputLabel}>CEP</Text>
                   <TextInput 
                     style={styles.input} 
                     value={postalcode} 
@@ -276,13 +272,13 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
                   />
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Rua *</Text>
+                  <Text style={styles.inputLabel}>Rua</Text>
                   <TextInput style={styles.input} value={street} onChangeText={setStreet} />
                 </View>
                 
                 <View style={styles.rowInputs}>
                   <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                    <Text style={styles.inputLabel}>Número *</Text>
+                    <Text style={styles.inputLabel}>Número</Text>
                     <TextInput style={styles.input} value={number} onChangeText={setNumber} />
                   </View>
                   <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
@@ -292,17 +288,17 @@ export default function EditCompanyModal({ visible, onClose, onSuccess, company 
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Bairro *</Text>
+                  <Text style={styles.inputLabel}>Bairro</Text>
                   <TextInput style={styles.input} value={neighborhood} onChangeText={setNeighborhood} />
                 </View>
 
                 <View style={styles.rowInputs}>
                   <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
-                    <Text style={styles.inputLabel}>Cidade *</Text>
+                    <Text style={styles.inputLabel}>Cidade</Text>
                     <TextInput style={styles.input} value={city} onChangeText={setCity} />
                   </View>
                   <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.inputLabel}>UF *</Text>
+                    <Text style={styles.inputLabel}>UF</Text>
                     <TextInput style={styles.input} value={state} onChangeText={setState} maxLength={2} autoCapitalize="characters" />
                   </View>
                 </View>
