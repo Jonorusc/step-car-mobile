@@ -107,11 +107,11 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                     </Text>
                   </View>
                   
-                  {fullVehicle.vehicle.discount > 0 && (
+                  {Number(fullVehicle.vehicle.discount || 0) > 0 && (
                     <View style={styles.invoicePricingRow}>
                       <Text style={styles.invoicePriceLabel}>Desconto:</Text>
                       <Text style={[styles.invoicePriceValue, { color: '#ef4444' }]}>
-                        - {formatCurrencyBRL(fullVehicle.vehicle.discount)}
+                        - {formatCurrencyBRL(Number(fullVehicle.vehicle.discount || 0))}
                       </Text>
                     </View>
                   )}
@@ -119,7 +119,7 @@ export default function VehicleDetailsModal({ visible, onClose, vehicleId }: Veh
                   <View style={[styles.invoicePricingRow, styles.invoiceGrandTotalRow]}>
                     <Text style={styles.invoiceTotalLabel}>Valor Final:</Text>
                     <Text style={styles.invoiceTotalValue}>
-                      {formatCurrencyBRL(Math.max(0, getSubtotal() - fullVehicle.vehicle.discount))}
+                      {formatCurrencyBRL(Math.max(0, getSubtotal() - Number(fullVehicle.vehicle.discount || 0)))}
                     </Text>
                   </View>
                 </View>

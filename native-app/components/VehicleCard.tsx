@@ -26,7 +26,8 @@ export default function VehicleCard({
   isPrinting = false,
   systemColor = Theme.colors.primary 
 }: VehicleCardProps) {
-  const netPriceFormatted = formatCurrencyBRL(vehicle.price - vehicle.discount);
+  const discountVal = Number(vehicle.discount) || 0;
+  const netPriceFormatted = formatCurrencyBRL(Number(vehicle.price || 0) - discountVal);
 
   // Lógica visual para a cor da bolinha
   const getBadgeColor = (colorName: string) => {
@@ -99,16 +100,22 @@ export default function VehicleCard({
                </View>
             )}
 
+            {discountVal > 0 && (
+              <View style={styles.rowBetween}>
+                <Text style={styles.labelText}>Subtotal:</Text>
+                <Text style={styles.valueText}>{formatCurrencyBRL(vehicle.price)}</Text>
+              </View>
+            )}
+            {discountVal > 0 && (
+              <View style={styles.rowBetween}>
+                <Text style={styles.labelText}>Desconto:</Text>
+                <Text style={styles.discountText}>- {formatCurrencyBRL(discountVal)}</Text>
+              </View>
+            )}
             <View style={styles.rowBetween}>
               <Text style={styles.labelText}>Valor Total:</Text>
               <Text style={[styles.priceHighlight, { color: systemColor }]}>{netPriceFormatted}</Text>
             </View>
-            {vehicle.discount > 0 && (
-              <View style={styles.rowBetween}>
-                <Text style={styles.labelText}>Desconto Aplicado:</Text>
-                <Text style={styles.discountText}>- {formatCurrencyBRL(vehicle.discount)}</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.cardActions}>

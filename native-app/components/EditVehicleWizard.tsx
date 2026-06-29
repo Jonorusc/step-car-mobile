@@ -61,6 +61,8 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [companySearch, setCompanySearch] = useState('');
 
   const colorsList = [
     { value: "Branco", label: "Branco", hex: "#FFFFFF" },
@@ -186,6 +188,8 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
       setDiscountStr('');
       setDiscountCents(0);
       setServiceSearch('');
+      setCategorySearch('');
+      setCompanySearch('');
     }
   }, [visible, fullVehicle]);
 
@@ -196,7 +200,12 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
       setDiscountCents(0);
       return;
     }
-    const cents = parseInt(cleanNum, 10);
+    let cents = parseInt(cleanNum, 10);
+    const subtotal = getSubtotal();
+    if (cents > subtotal) {
+      cents = subtotal;
+      Alert.alert('Desconto Inválido', 'O desconto não pode ser maior que o subtotal.');
+    }
     setDiscountCents(cents);
     setDiscountStr(formatCurrencyBRL(cents));
   };
@@ -224,7 +233,10 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedCategories((prev) => {
       const exists = prev.find(c => c.id === cat.id);
-      if (exists) return prev.filter(c => c.id !== cat.id);
+      if (exists) {
+        setSelectedServices(prevSvc => prevSvc.filter(s => s.category_id !== cat.id));
+        return prev.filter(c => c.id !== cat.id);
+      }
       return [...prev, cat];
     });
   };
@@ -301,6 +313,10 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
 
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (discountCents > getSubtotal()) {
+      Alert.alert('Valor do Desconto', 'O desconto não pode ser maior que o subtotal.');
+      return;
+    }
     updateMutation.mutate();
   };
 
@@ -421,31 +437,56 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
             {currentStep === 2 && (
               <View style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Categorias</Text>
+
+                <View style={styles.searchContainer}>
+                  <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar categoria..."
+                    placeholderTextColor="#94a3b8"
+                    value={categorySearch}
+                    onChangeText={setCategorySearch}
+                  />
+                </View>
                 
                 {loadingCategories ? (
                   <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 40 }} />
                 ) : (
                   <View style={styles.categoryGrid}>
-                    {categories.map((cat: Category) => {
-                      const isSelected = !!selectedCategories.find(c => c.id === cat.id);
-                      return (
-                        <TouchableOpacity
-                          key={cat.id}
-                          style={[styles.categoryCard, isSelected ? styles.categoryCardSelected : null]}
-                          onPress={() => toggleCategory(cat)}
-                          activeOpacity={0.7}
-                        >
-                          <MaterialIcons
-                            name="directions-car"
-                            size={28}
-                            color={isSelected ? '#ffffff' : '#64748b'}
-                          />
-                          <Text style={[styles.categoryCardText, isSelected ? styles.categoryCardTextSelected : null]}>
-                            {cat.name}
-                          </Text>
-                        </TouchableOpacity>
+                    {(() => {
+                      const filteredCategories = categories.filter((cat: Category) =>
+                        !categorySearch || cat.name.toLowerCase().includes(categorySearch.toLowerCase())
                       );
-                    })}
+
+                      if (filteredCategories.length === 0) {
+                        return (
+                          <Text style={{ textAlign: 'center', color: '#64748b', marginTop: 20, width: '100%' }}>
+                            Nenhuma categoria encontrada para "{categorySearch}"
+                          </Text>
+                        );
+                      }
+
+                      return filteredCategories.map((cat: Category) => {
+                        const isSelected = !!selectedCategories.find(c => c.id === cat.id);
+                        return (
+                          <TouchableOpacity
+                            key={cat.id}
+                            style={[styles.categoryCard, isSelected ? styles.categoryCardSelected : null]}
+                            onPress={() => toggleCategory(cat)}
+                            activeOpacity={0.7}
+                          >
+                            <MaterialIcons
+                              name="directions-car"
+                              size={28}
+                              color={isSelected ? '#ffffff' : '#64748b'}
+                            />
+                            <Text style={[styles.categoryCardText, isSelected ? styles.categoryCardTextSelected : null]}>
+                              {cat.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      });
+                    })()}
                   </View>
                 )}
               </View>
@@ -546,7 +587,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
 
             {currentStep === 4 && (
               <View style={styles.stepContainer}>
-                <Text style={styles.stepTitle}>Empresa Parceira & Desconto</Text>
+                <Text style={styles.stepTitle}>Empresa Parceira</Text>
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Empresa Conveniada (Opcional)</Text>
@@ -563,10 +604,20 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                   
                   {showCompanyDropdown && (
                     <View style={styles.dropdownList}>
+                      <View style={[styles.searchContainer, { marginHorizontal: 8, marginTop: 8, marginBottom: 8, height: 38 }]}>
+                        <MaterialIcons name="search" size={18} color="#94a3b8" style={styles.searchIcon} />
+                        <TextInput
+                          style={[styles.searchInput, { fontSize: 13, height: 36 }]}
+                          placeholder="Buscar empresa..."
+                          placeholderTextColor="#94a3b8"
+                          value={companySearch}
+                          onChangeText={setCompanySearch}
+                        />
+                      </View>
                       <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
                         <TouchableOpacity
                           style={[styles.dropdownItem, selectedCompany === null && styles.dropdownItemSelected]}
-                          onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(false); }}
+                          onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(false); setCompanySearch(''); }}
                         >
                           <Text style={[styles.dropdownItemText, selectedCompany === null && styles.dropdownItemTextSelected]}>
                             Nenhuma
@@ -574,35 +625,39 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                           {selectedCompany === null && <MaterialIcons name="check" size={20} color="#0f172a" />}
                         </TouchableOpacity>
                         
-                        {companies.map((comp: Company) => {
-                          const isSelected = selectedCompany?.id === comp.id;
-                          return (
-                            <TouchableOpacity
-                              key={comp.id}
-                              style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
-                              onPress={() => { setSelectedCompany(comp); setShowCompanyDropdown(false); }}
-                            >
-                              <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]} numberOfLines={1}>
-                                {comp.fantasy_name || comp.company_name}
+                        {(() => {
+                          const filtered = companies.filter((comp: Company) => {
+                            const name = (comp.fantasy_name || comp.company_name || '').toLowerCase();
+                            return name.includes(companySearch.toLowerCase());
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <Text style={{ textAlign: 'center', color: '#64748b', marginVertical: 12, fontSize: 13 }}>
+                                Nenhuma empresa encontrada
                               </Text>
-                              {isSelected && <MaterialIcons name="check" size={20} color="#0f172a" />}
-                            </TouchableOpacity>
-                          );
-                        })}
+                            );
+                          }
+
+                          return filtered.map((comp: Company) => {
+                            const isSelected = selectedCompany?.id === comp.id;
+                            return (
+                              <TouchableOpacity
+                                key={comp.id}
+                                style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                                onPress={() => { setSelectedCompany(comp); setShowCompanyDropdown(false); setCompanySearch(''); }}
+                              >
+                                <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]} numberOfLines={1}>
+                                  {comp.fantasy_name || comp.company_name}
+                                </Text>
+                                {isSelected && <MaterialIcons name="check" size={20} color="#0f172a" />}
+                              </TouchableOpacity>
+                            );
+                          });
+                        })()}
                       </ScrollView>
                     </View>
                   )}
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Desconto Especial (Opcional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="R$ 0,00"
-                    keyboardType="numeric"
-                    value={discountStr}
-                    onChangeText={handleDiscountChange}
-                  />
                 </View>
               </View>
             )}
@@ -647,7 +702,7 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                     <Text style={styles.invoiceSectionTitle}>Serviços Contratados</Text>
                     {selectedServices.map((svc) => (
                       <View key={svc.id} style={styles.invoiceSvcRow}>
-                        <Text style={styles.invoiceSvcName}>• {svc.name} {svc.quantity > 1 ? `(x${svc.quantity})` : ''}</Text>
+                        <Text style={styles.invoiceSvcName}>• {svc.name} (x{svc.quantity})</Text>
                         <Text style={styles.invoiceSvcPrice}>
                           {formatCurrencyBRL(svc.price * svc.quantity)}
                         </Text>
@@ -679,6 +734,17 @@ export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicle
                       </Text>
                     </View>
                   </View>
+                </View>
+
+                <View style={[styles.inputGroup, { marginTop: 20 }]}>
+                  <Text style={styles.inputLabel}>Desconto Especial (Opcional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="R$ 0,00"
+                    keyboardType="numeric"
+                    value={discountStr}
+                    onChangeText={handleDiscountChange}
+                  />
                 </View>
               </View>
             )}
@@ -1181,50 +1247,49 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   backBtn: {
     flex: 1,
-    height: 52,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    marginRight: 12,
+    borderRadius: 8,
   },
   backBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#475569',
   },
   nextBtn: {
     flex: 1,
-    height: 52,
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0f172a',
-    borderRadius: 12,
+    borderRadius: 8,
   },
   nextBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#ffffff',
   },
   saveBtn: {
     flex: 2,
-    height: 52,
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#10b981',
-    borderRadius: 12,
+    borderRadius: 8,
   },
   saveBtnDisabled: {
     backgroundColor: '#94a3b8',
   },
   saveBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#ffffff',
   },
