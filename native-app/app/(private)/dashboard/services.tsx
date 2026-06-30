@@ -14,10 +14,11 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
-import { useUser } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useServiceList, useDeleteService, Service } from '@/hooks/useService';
 import { useCategoryList } from '@/hooks/useCategory';
 import { Theme } from '@/constants/theme';
+import { useCoinsFormatted } from '@/utils/currency';
 import EditServiceModal from '@/components/EditServiceModal';
 import LoadingLogo from '@/components/LoadingLogo';
 import { useLocalSearchParams } from 'expo-router';
@@ -35,8 +36,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function ServicesScreen() {
   const { activeEstablishment } = useSession();
-  const user = useUser();
-  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
+  const { canCreateService, canEditService, canDeleteService } = useRBAC();
   const systemColor = Theme.colors.primary;
   const { categoryId } = useLocalSearchParams();
 
@@ -129,7 +129,7 @@ export default function ServicesScreen() {
   };
 
   const formatMoney = (amount: number) => {
-    return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+    return useCoinsFormatted(amount);
   };
 
   const renderEmpty = () => {
@@ -190,7 +190,7 @@ export default function ServicesScreen() {
       </View>
 
       <View style={styles.cardFooter}>
-        {!isEmployee && (
+        {canEditService && (
           <TouchableOpacity 
             style={styles.actionBtn}
             onPress={() => handleEdit(item)}
@@ -201,7 +201,7 @@ export default function ServicesScreen() {
           </TouchableOpacity>
         )}
 
-        {!isEmployee && (
+        {canDeleteService && (
           <TouchableOpacity 
             style={[styles.actionBtn, styles.actionBtnDanger]}
             onPress={() => handleDeleteConfirm(item)}
@@ -253,7 +253,7 @@ export default function ServicesScreen() {
             </TouchableOpacity>
           </View>
 
-          {!isEmployee && (
+          {canCreateService && (
             <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
               <MaterialIcons name="add" size={24} color="#ffffff" />
             </TouchableOpacity>

@@ -1,12 +1,12 @@
 import { Slot, useRouter, useSegments, useRootNavigationState, SplashScreen } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useAuthStore, isUserSubscribed } from '../hooks/useAuth';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch(() => { });
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,7 +35,7 @@ export default function RootLayout() {
     const segmentsList = segments as string[];
     const inAuthGroup = segmentsList[0] === '(auth)';
     const onSubscriptionPage = segmentsList[0] === '(auth)' && segmentsList[1] === 'subscription';
-    
+
     const isSubscribed = isUserSubscribed(user);
 
     if (!isAuthenticated) {
@@ -59,13 +59,13 @@ export default function RootLayout() {
         }
       }
     }
-    
+
     setIsNavigationReady(true);
   }, [isAuthenticated, user, segments, isLoading, rootNavigationState?.key]);
 
   useEffect(() => {
     if (isNavigationReady) {
-      SplashScreen.hideAsync().catch(() => {});
+      SplashScreen.hideAsync().catch(() => { });
     }
   }, [isNavigationReady]);
 

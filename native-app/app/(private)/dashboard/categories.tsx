@@ -13,8 +13,8 @@ import {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/hooks/useSession';
-import { useUser } from '@/hooks/useAuth';
 import { useCategoryList, useDeleteCategory, Category } from '@/hooks/useCategory';
+import { useRBAC } from '@/hooks/useRBAC';
 import { Theme } from '@/constants/theme';
 import EditCategoryModal from '@/components/EditCategoryModal';
 import LoadingLogo from '@/components/LoadingLogo';
@@ -34,8 +34,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function CategoriesScreen() {
   const { activeEstablishment } = useSession();
-  const user = useUser();
-  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
+  const { canCreateCategory, canEditCategory, canDeleteCategory } = useRBAC();
   const router = useRouter();
   const systemColor = Theme.colors.primary;
 
@@ -160,7 +159,7 @@ export default function CategoriesScreen() {
           <Text style={styles.actionBtnText}>Ver Serviços</Text>
         </TouchableOpacity>
 
-        {!isEmployee && (
+        {canEditCategory && (
           <TouchableOpacity 
             style={styles.actionBtn}
             onPress={() => handleEdit(item)}
@@ -171,7 +170,7 @@ export default function CategoriesScreen() {
           </TouchableOpacity>
         )}
 
-        {!isEmployee && (
+        {canDeleteCategory && (
           <TouchableOpacity 
             style={[styles.actionBtn, styles.actionBtnDanger]}
             onPress={() => handleDeleteConfirm(item)}
@@ -208,7 +207,7 @@ export default function CategoriesScreen() {
             )}
           </View>
 
-          {!isEmployee && (
+          {canCreateCategory && (
             <TouchableOpacity style={styles.createBtn} onPress={handleCreate} activeOpacity={0.8}>
               <MaterialIcons name="add" size={24} color="#ffffff" />
             </TouchableOpacity>

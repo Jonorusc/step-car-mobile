@@ -26,13 +26,12 @@ import { Theme } from '@/constants/theme';
 import { useCouponBuilder } from '@/hooks/useCouponBuilder';
 import useBLE from '@/hooks/useBLE';
 import { useVehicles, Vehicle } from '@/hooks/useVehicles';
-import { useUser } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 
 export default function VehiclesScreen() {
   const queryClient = useQueryClient();
   const { activeEstablishment } = useSession();
-  const user = useUser();
-  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
+  const { canEditRecord, canDeleteRecord } = useRBAC();
   const { print, isConnected } = useBLE();
   const { buildCouponData } = useCouponBuilder();
   const systemColor = Theme.colors.primary;
@@ -326,8 +325,8 @@ export default function VehiclesScreen() {
           <VehicleCard
             vehicle={item}
             onPrint={handlePrintReceipt}
-            onDelete={isEmployee ? undefined : handleDeleteConfirm}
-            onEdit={isEmployee ? undefined : handleEdit}
+            onDelete={canDeleteRecord ? handleDeleteConfirm : undefined}
+            onEdit={canEditRecord ? handleEdit : undefined}
             onViewDetails={handleViewDetails}
             isPrinting={printingId === item.id}
             systemColor={systemColor}

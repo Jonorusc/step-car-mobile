@@ -23,6 +23,7 @@ import VehicleDetailsModal from '@/components/VehicleDetailsModal';
 import VehicleCard from '@/components/VehicleCard';
 import LoadingLogo from '@/components/LoadingLogo';
 import { Theme } from '@/constants/theme';
+import { useRBAC } from '@/hooks/useRBAC';
 
 
 // ============================================================================
@@ -88,6 +89,7 @@ export default function RegistroDashboard() {
   const { activeEstablishment } = useSession();
   const { print, isConnected } = useBLE();
   const { buildCouponData } = useCouponBuilder();
+  const { canCreateRecord, canEditRecord, canDeleteRecord } = useRBAC();
 
   const systemColor = Theme.colors.primary;
 
@@ -220,10 +222,12 @@ export default function RegistroDashboard() {
     <View style={styles.container}>
       {/* Botão Flutuante Superior de Ação Principal */}
       <View style={styles.topSection}>
-        <TouchableOpacity style={[styles.fab, { backgroundColor: systemColor, shadowColor: systemColor }]} onPress={() => setWizardVisible(true)} activeOpacity={0.8}>
-          <MaterialIcons name="add" size={24} color="#FFF" />
-          <Text style={styles.fabText}>NOVO REGISTRO</Text>
-        </TouchableOpacity>
+        {canCreateRecord && (
+          <TouchableOpacity style={[styles.fab, { backgroundColor: systemColor, shadowColor: systemColor }]} onPress={() => setWizardVisible(true)} activeOpacity={0.8}>
+            <MaterialIcons name="add" size={24} color="#FFF" />
+            <Text style={styles.fabText}>NOVO REGISTRO</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
@@ -239,8 +243,8 @@ export default function RegistroDashboard() {
           <VehicleCard
             vehicle={item}
             onPrint={handlePrint}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
+            onDelete={canDeleteRecord ? handleDelete : undefined}
+            onEdit={canEditRecord ? handleEdit : undefined}
             onViewDetails={handleViewDetails}
             isPrinting={printingId === item.id}
             systemColor={systemColor}

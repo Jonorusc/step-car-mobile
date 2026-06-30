@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import useUser from '@/hooks/useUser';
 import { useSession } from '@/hooks/useSession';
 import { useAuthStore } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useRouter } from 'expo-router';
 import { Theme } from '@/constants/theme';
 
@@ -32,7 +33,8 @@ export default function WebStyleDrawer({ isOpen, onClose, activeRoute, onNavigat
   const user = useUser();
   const { activeEstablishment, setActiveEstablishment } = useSession();
   const { logout } = useAuthStore();
-  
+  const { canViewFinancial } = useRBAC();
+
   // Animated value ranging from 0 (closed) to 1 (open)
   const animation = useRef(new Animated.Value(0)).current;
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -79,10 +81,10 @@ export default function WebStyleDrawer({ isOpen, onClose, activeRoute, onNavigat
 
   const menuItems = [
     { label: 'Registro', route: 'index', icon: 'edit' },
-    { label: 'Financeiro', route: 'financeiro', icon: 'assessment' },
+    ...(canViewFinancial ? [{ label: 'Financeiro', route: 'financeiro', icon: 'assessment' }] : []),
     { label: 'Categorias', route: 'categories', icon: 'view-module' },
     { label: 'Serviços', route: 'services', icon: 'build' },
-    { label: 'Empresas', route: 'companies', icon: 'business' },
+    // { label: 'Empresas', route: 'companies', icon: 'business' },
     { label: 'Veículos', route: 'vehicles', icon: 'directions-car' },
   ];
 
@@ -141,7 +143,7 @@ export default function WebStyleDrawer({ isOpen, onClose, activeRoute, onNavigat
 
               {activeEstablishment && (
                 <View style={[
-                  styles.establishmentBadge, 
+                  styles.establishmentBadge,
                   { backgroundColor: Theme.colors.borderLight, borderColor: Theme.colors.border }
                 ]}>
                   <MaterialIcons name="storefront" size={14} color={Theme.colors.textSecondary} style={styles.badgeIcon} />

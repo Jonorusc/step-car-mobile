@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { Theme } from '@/constants/theme';
 import { useSession } from '@/hooks/useSession';
 import { useUser } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useCompanyList, useDeleteCompany, Company } from '@/hooks/useCompany';
 
 import EditCompanyModal from '@/components/EditCompanyModal';
@@ -28,7 +29,7 @@ import CompanyVehiclesSheet from '@/components/CompanyVehiclesSheet';
 export default function CompaniesScreen() {
   const { activeEstablishment } = useSession();
   const user = useUser();
-  const isEmployee = user?.type_user?.toLowerCase() === 'employee';
+  const { canCreateCompany, canEditCompany, canDeleteCompany } = useRBAC();
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -90,7 +91,7 @@ export default function CompaniesScreen() {
   const renderRightActions = (item: Company) => {
     return (
       <View style={styles.swipeActionsContainer}>
-        {!isEmployee && (
+        {canEditCompany && (
           <TouchableOpacity
             style={[styles.swipeActionBtn, { backgroundColor: Theme.colors.primary }]}
             onPress={() => {
@@ -127,7 +128,7 @@ export default function CompaniesScreen() {
           <Text style={styles.swipeActionText} numberOfLines={1} adjustsFontSizeToFit>Fechamentos</Text>
         </TouchableOpacity>
 
-        {!isEmployee && (
+        {canDeleteCompany && (
           <TouchableOpacity
             style={[styles.swipeActionBtn, { backgroundColor: '#ef4444' }]}
             onPress={() => {
@@ -160,7 +161,7 @@ export default function CompaniesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Empresas Parceiras</Text>
-        {!isEmployee && (
+        {canCreateCompany && (
           <TouchableOpacity
             style={styles.addBtn}
             onPress={() => {

@@ -135,7 +135,20 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
     push(`Modelo: ${setBold(true)}${data.vehicleToCupom.model || 'N/A'}${setBold(false)}\n`);
     push(`Placa: ${setBold(true)}${data.vehicleToCupom.plate || 'N/A'}${setBold(false)}\n`);
     push(`Cor: ${setBold(true)}${data.vehicleToCupom.color || 'N/A'}${setBold(false)}\n`);
-    push(`Entrada: ${setBold(true)}${data.vehicleToCupom.created_at_formatted || data.vehicleToCupom.created_at || 'N/A'}${setBold(false)}\n`);
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    };
+
+    let entryDate = data.vehicleToCupom?.created_at_formatted || data.vehicleToCupom?.createdAtFormatted || (data as any)?.created_at_formatted;
+    
+    if (!entryDate) {
+        const rawDate = data.vehicleToCupom?.created_at || data.vehicleToCupom?.createdAt;
+        entryDate = rawDate ? formatDate(rawDate) : 'N/A';
+    }
+
+    push(`Entrada: ${setBold(true)}${entryDate}${setBold(false)}\n`);
     if (data.vehicleToCupom.company?.name) {
         push(`Convênio: ${setBold(true)}${data.vehicleToCupom.company.name}${setBold(false)}\n`);
     }
@@ -162,7 +175,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
                     .filter((service: any) => service && service.category_id === category.value)
                     .forEach((service: any) => {
                         const qty = service.quantity || 1;
-                        const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                        const nameWithQty = `${qty}x ${service.name}`;
                         const totalPrice = (service.price || 0) * qty;
                         push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
                     });
@@ -181,7 +194,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
         data.collectFormattedServicesToModal.forEach((service: any) => {
             if (service) {
                 const qty = service.quantity || 1;
-                const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                const nameWithQty = `${qty}x ${service.name}`;
                 const totalPrice = (service.price || 0) * qty;
                 push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
             }
@@ -198,7 +211,7 @@ export const buildPrintMessage = async (data: CUPOM): Promise<Buffer> => {
         data.vehicleToCupom.services.forEach((service: any) => {
             if (service) {
                 const qty = service.quantity || 1;
-                const nameWithQty = qty > 1 ? `${qty}x ${service.name}` : service.name;
+                const nameWithQty = `${qty}x ${service.name}`;
                 const totalPrice = (service.price || 0) * qty;
                 push(formatServiceLine(nameWithQty, useCoinsFormatted(totalPrice)));
             }

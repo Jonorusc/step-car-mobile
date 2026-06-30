@@ -52,7 +52,7 @@ interface BLEPrinterHook {
     devices: Device[];
     scan: () => void;
     stopScan: () => void;
-    connectToDevice: (device: Device) => Promise<{ success: boolean; cleanup?: () => void }>;
+    connectToDevice: (device: Device, silent?: boolean) => Promise<{ success: boolean; cleanup?: () => void }>;
     disconnect: () => Promise<void>;
     print: (data: CUPOM) => Promise<void>;
     isConnected: boolean;
@@ -136,8 +136,8 @@ function useBLE(): BLEPrinterHook {
             }
 
             // 🚨 Só tenta reconectar se o Bluetooth estiver ligado
-            const { bluetoothState } = useBLEStore.getState();
-            if (bluetoothState === 'PoweredOn' && !isConnecting && device) {
+            const { bluetoothState, isConnecting: currentIsConnecting } = useBLEStore.getState();
+            if (bluetoothState === 'PoweredOn' && !currentIsConnecting && device) {
                 setIsConnecting(true);
                 await reconnectToDevice(device).finally(() => setIsConnecting(false));
             } else {
@@ -150,7 +150,7 @@ function useBLE(): BLEPrinterHook {
         return () => {
             subscription.remove();
         };
-    }, [connectedDevice, isConnecting, bleManager, setIsConnecting, setConnectedDevice, setCharacteristic]);
+    }, [connectedDevice, bleManager, setIsConnecting, setConnectedDevice, setCharacteristic]);
 
     const requestPermissions = async () => {
         if (Platform.OS === 'ios') return true;
@@ -206,9 +206,9 @@ function useBLE(): BLEPrinterHook {
     let keepAliveCleanup: (() => void) | null = null;
 
     const connectToDevice = useCallback(
-        async (device: Device) => {
+        async (device: Device, silent = false) => {
             if (!bleManager) {
-                Alert.alert('Erro', 'Bluetooth não está disponível neste dispositivo.');
+                if (!silent) Alert.alert('Erro', 'Bluetooth não está disponível neste dispositivo.');
                 return { success: false };
             }
             try {
@@ -228,7 +228,7 @@ function useBLE(): BLEPrinterHook {
                 }
 
                 if (!writableCharacteristic) {
-                    Alert.alert('Erro', 'O dispositivo conectado não é uma impressora');
+                    if (!silent) Alert.alert('Erro', 'O dispositivo conectado não é uma impressora');
                     return { success: false };
                 }
 
@@ -243,7 +243,7 @@ function useBLE(): BLEPrinterHook {
             } catch (error) {
                 logger.error('Failed to connect:', error);
                 setConnectionState('disconnected');
-                Alert.alert('Erro', 'Não foi possível conectar ao dispositivo');
+                if (!silent) Alert.alert('Erro', 'Não foi possível conectar ao dispositivo');
                 return { success: false };
             } finally {
                 setIsConnecting(false);
@@ -259,7 +259,7 @@ function useBLE(): BLEPrinterHook {
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    const { success } = await connectToDevice(device);
+                    const { success } = await connectToDevice(device, true);
                     if (success) {
                         logger.log('Reconnected successfully!');
                         return;
@@ -270,7 +270,7 @@ function useBLE(): BLEPrinterHook {
                 await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
             }
 
-            Alert.alert('Erro', 'Não foi possível reconectar à impressora');
+            Alert.alert('Desconectado', 'A conexão com a impressora foi perdida.');
             setConnectedDevice(null);
             setCharacteristic(null);
         },
