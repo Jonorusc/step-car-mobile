@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useCreateService, useUpdateService } from '@/hooks/useService';
 import { useCategoryList } from '@/hooks/useCategory';
 import { useSession } from '@/hooks/useSession';
+import { useCoinsFormatted } from '@/utils/currency';
 
 export default function EditServiceModal({ visible, onClose, onSuccess, service }: any) {
   const { activeEstablishment } = useSession();
@@ -55,15 +56,11 @@ export default function EditServiceModal({ visible, onClose, onSuccess, service 
   }, [visible, service]);
 
   const handlePriceChange = (val: string) => {
-    // Only allow numbers and decimal point
-    const cleaned = val.replace(/[^0-9.]/g, '');
-    // Prevent multiple dots
-    const parts = cleaned.split('.');
-    if (parts.length > 2) {
-      setPrice(parts[0] + '.' + parts.slice(1).join(''));
-    } else {
-      setPrice(cleaned);
+    let onlyDigits = val.replace(/\D/g, '');
+    if (parseInt(onlyDigits, 10) === 0) {
+      onlyDigits = '';
     }
+    setPrice(onlyDigits);
   };
 
   const handleSave = () => {
@@ -185,8 +182,8 @@ export default function EditServiceModal({ visible, onClose, onSuccess, service 
               <Text style={styles.inputLabel}>Preço (R$) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="0.00"
-                value={price}
+                placeholder="R$ 0,00"
+                value={price ? useCoinsFormatted(price) : ''}
                 onChangeText={handlePriceChange}
                 keyboardType="numeric"
               />
