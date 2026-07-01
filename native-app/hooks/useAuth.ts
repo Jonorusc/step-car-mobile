@@ -34,14 +34,15 @@ export interface User {
     current_period_end?: string;
     subscription_active?: Subscription[];
     address?: Address[];
-    employee_has_access?: boolean;
+    employee_has_access?: boolean | number;
+    force_access?: boolean | number;
 }
 
 export const isUserSubscribed = (user: User | null): boolean => {
     if (!user) return false;
     
-    // Check if employee has access
-    if (user.type_user === 'employee' && user.employee_has_access === true) {
+    // Check if employee has access (Mirror web-stepcar logic)
+    if (user.type_user?.toLowerCase() === 'employee' || user.employee_has_access === true || user.employee_has_access === 1) {
         return true;
     }
 
@@ -55,6 +56,8 @@ export const isUserSubscribed = (user: User | null): boolean => {
         user.is_subscriber === true ||
         user.is_subscriber === 1 ||
         user.payment_status === 'active' ||
+        user.force_access === 1 ||
+        user.force_access === true ||
         hasActiveSubscription
     );
 };
