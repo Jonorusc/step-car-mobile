@@ -1,0 +1,1296 @@
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as Haptics from 'expo-haptics';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/utils/api';
+import { useSession } from '@/hooks/useSession';
+import { getSafeErrorMessage } from '@/utils/errorMessages';
+import { validatePlate } from '@/utils/validation';
+import { formatCurrencyBRL, formatPlateInput, formatPlateDisplay, unformatPlate } from '@/utils/formatters';
+
+interface Service {
+  id: number;
+  name: string;
+  price: number;
+  category_id?: number;
+}
+
+interface SelectedService extends Service {
+  quantity: number;
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface Company {
+  id: number;
+  company_name: string;
+  fantasy_name: string;
+  cnpj?: string;
+}
+
+interface EditVehicleWizardProps {
+  visible: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  vehicleId: number | null;
+}
+
+export default function EditVehicleWizard({ visible, onClose, onSuccess, vehicleId }: EditVehicleWizardProps) {
+  const queryClient = useQueryClient();
+  const { activeEstablishment } = useSession();
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Form States
+  const [plate, setPlate] = useState('');
+  const [model, setModel] = useState('');
+  const [color, setColor] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [companySearch, setCompanySearch] = useState('');
+
+  const colorsList = [
+    { value: "Branco", label: "Branco", hex: "#FFFFFF" },
+    { value: "Preto", label: "Preto", hex: "#000000" },
+    { value: "Prata", label: "Prata", hex: "#C0C0C0" },
+    { value: "Cinza", label: "Cinza", hex: "#808080" },
+    { value: "Azul", label: "Azul", hex: "#0000FF" },
+    { value: "Vermelho", label: "Vermelho", hex: "#FF0000" },
+    { value: "Verde", label: "Verde", hex: "#008000" },
+    { value: "Amarelo", label: "Amarelo", hex: "#FFFF00" },
+    { value: "Laranja", label: "Laranja", hex: "#FFA500" },
+    { value: "Roxo", label: "Roxo", hex: "#800080" },
+    { value: "Marrom", label: "Marrom", hex: "#8B4513" },
+  ];
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [discountStr, setDiscountStr] = useState('');
+  const [discountCents, setDiscountCents] = useState(0);
+
+  // Fetch full vehicle data
+  const { data: fullVehicle, isLoading: loadingFull } = useQuery({
+    queryKey: ['fullVehicle', vehicleId],
+    queryFn: async () => {
+      const res = await api.get(`/user/vehicle/show/full/${vehicleId}`);
+      return res.data?.data;
+    },
+    enabled: visible && !!vehicleId,
+    staleTime: 0,
+  });
+
+  // Queries for options
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['categories', activeEstablishment?.id],
+    queryFn: async () => {
+      const res = await api.get('/user/category/list', { params: { establishmentId: activeEstablishment?.id } });
+      const payload = res.data?.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.data)) return payload.data;
+      if (res.data && Array.isArray(res.data.data)) return res.data.data;
+      return [];
+    },
+    enabled: visible && !!activeEstablishment,
+  });
+
+  const { data: services = [], isLoading: loadingServices } = useQuery({
+    queryKey: ['services', activeEstablishment?.id, selectedCategories.map(c => c.id).join(',')],
+    queryFn: async () => {
+      const categoryIdsParam = selectedCategories.map(c => c.id).join(',');
+      const res = await api.get('/user/service/list', { 
+        params: { establishmentId: activeEstablishment?.id, categoryIds: categoryIdsParam } 
+      });
+      const payload = res.data?.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.data)) return payload.data;
+      if (res.data && Array.isArray(res.data.data)) return res.data.data;
+      return [];
+    },
+    enabled: visible && !!activeEstablishment && selectedCategories.length > 0,
+  });
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ['wizard_companies_list', activeEstablishment?.id],
+    queryFn: async () => {
+      const res = await api.get('/user/company/list', {
+        params: { establishmentId: activeEstablishment?.id, limitPerPage: 100, page: 1 }
+      });
+      const payload = res.data?.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.data)) return payload.data;
+      if (res.data && Array.isArray(res.data.data)) return res.data.data;
+      return [];
+    },
+    enabled: !!activeEstablishment,
+  });
+
+  // Populate data when fullVehicle loads
+  useEffect(() => {
+    if (visible && fullVehicle) {
+      const v = fullVehicle.vehicle;
+      setPlate(formatPlateDisplay(v.plate || ''));
+      setModel(v.model || '');
+      setColor(v.color || '');
+      
+      const disc = v.discount || 0;
+      setDiscountCents(disc);
+      if (disc > 0) {
+        setDiscountStr(formatCurrencyBRL(disc));
+      } else {
+        setDiscountStr('');
+      }
+
+      setSelectedCompany(fullVehicle.company || null);
+
+      if (fullVehicle.services && Array.isArray(fullVehicle.services)) {
+        const catIds = [...new Set(fullVehicle.services.map((s: any) => s.category_id))];
+        const mappedCategories = catIds.map((id) => {
+          const s = fullVehicle.services.find((serv: any) => serv.category_id === id);
+          return { id: id as number, name: s.category_name };
+        });
+        setSelectedCategories(mappedCategories);
+
+        const mappedServices = fullVehicle.services.map((s: any) => ({
+          id: s.service_id,
+          name: s.name,
+          price: s.price,
+          category_id: s.category_id,
+          quantity: s.quantity,
+        }));
+        setSelectedServices(mappedServices);
+      }
+      
+      setCurrentStep(1);
+    } else if (!visible) {
+      setCurrentStep(1);
+      setPlate('');
+      setModel('');
+      setColor('');
+      setSelectedCategories([]);
+      setSelectedServices([]);
+      setSelectedCompany(null);
+      setDiscountStr('');
+      setDiscountCents(0);
+      setServiceSearch('');
+      setCategorySearch('');
+      setCompanySearch('');
+    }
+  }, [visible, fullVehicle]);
+
+  const handleDiscountChange = (text: string) => {
+    const cleanNum = text.replace(/[^0-9]/g, '');
+    if (!cleanNum) {
+      setDiscountStr('');
+      setDiscountCents(0);
+      return;
+    }
+    let cents = parseInt(cleanNum, 10);
+    const subtotal = getSubtotal();
+    if (cents > subtotal) {
+      cents = subtotal;
+      Alert.alert('Desconto Inválido', 'O desconto não pode ser maior que o subtotal.');
+    }
+    setDiscountCents(cents);
+    setDiscountStr(formatCurrencyBRL(cents));
+  };
+
+  const getServiceQuantity = (serviceId: number) => {
+    const s = selectedServices.find(x => x.id === serviceId);
+    return s ? s.quantity : 0;
+  };
+
+  const updateServiceQuantity = (service: Service, quantity: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedServices((prev) => {
+      if (quantity <= 0) {
+        return prev.filter(s => s.id !== service.id);
+      }
+      const existing = prev.find(s => s.id === service.id);
+      if (existing) {
+        return prev.map(s => s.id === service.id ? { ...s, quantity } : s);
+      }
+      return [...prev, { ...service, quantity }];
+    });
+  };
+
+  const toggleCategory = (cat: Category) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedCategories((prev) => {
+      const exists = prev.find(c => c.id === cat.id);
+      if (exists) {
+        setSelectedServices(prevSvc => prevSvc.filter(s => s.category_id !== cat.id));
+        return prev.filter(c => c.id !== cat.id);
+      }
+      return [...prev, cat];
+    });
+  };
+
+  const getSubtotal = () => {
+    return selectedServices.reduce((sum, s) => sum + (s.price * s.quantity), 0);
+  };
+
+  const getNetPrice = () => {
+    const sub = getSubtotal();
+    return Math.max(0, sub - discountCents);
+  };
+
+  const handleNextStep = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (currentStep === 1) {
+      if (!plate || !model || !color) {
+        Alert.alert('Campos Obrigatórios', 'Por favor, preencha todos os dados básicos do veículo.');
+        return;
+      }
+      if (plate.length < 7) {
+        Alert.alert('Placa Inválida', 'A placa do veículo deve conter pelo menos 7 caracteres.');
+        return;
+      }
+    } else if (currentStep === 2 && selectedCategories.length === 0) {
+      Alert.alert('Categorias Obrigatórias', 'Por favor, selecione pelo menos uma categoria.');
+      return;
+    } else if (currentStep === 3 && selectedServices.length === 0) {
+      Alert.alert('Serviço Obrigatório', 'Por favor, selecione pelo menos um serviço.');
+      return;
+    }
+    setCurrentStep((prev) => prev + 1);
+  };
+
+  const handlePrevStep = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCurrentStep((prev) => Math.max(1, prev - 1));
+  };
+
+  // Submit Mutation
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        vehicleId: vehicleId,
+        establishmentId: activeEstablishment?.id,
+        services: selectedServices.map((s) => ({
+          id: s.id,
+          name: s.name,
+          price: s.price,
+          quantity: s.quantity,
+          category_id: s.category_id
+        })),
+        companyId: selectedCompany?.id || null,
+        plate: unformatPlate(plate),
+        model: model,
+        color: color,
+        discount: discountCents,
+      };
+      const res = await api.put('/user/vehicle/update', payload);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['fullVehicle', vehicleId] });
+      onSuccess();
+    },
+    onError: (err: any) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const message = err.response?.data?.message || 'Não foi possível atualizar o veículo.';
+      Alert.alert('Erro na Edição', message);
+    },
+  });
+
+  const handleSave = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (discountCents > getSubtotal()) {
+      Alert.alert('Valor do Desconto', 'O desconto não pode ser maior que o subtotal.');
+      return;
+    }
+    updateMutation.mutate();
+  };
+
+  if (loadingFull && visible) {
+    return (
+      <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.sheetContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color="#0f172a" />
+            <Text style={{ marginTop: 12, color: '#64748b', fontWeight: '600' }}>Carregando dados...</Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.sheetContainer}>
+          {/* Header */}
+          <View style={styles.sheetHeader}>
+            <View>
+              <Text style={styles.sheetTitle}>Editar Registro</Text>
+              <Text style={styles.sheetSub}>Passo {currentStep} de 5</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={22} color="#475569" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Progress Timeline */}
+          <View style={styles.timeline}>
+            {[1, 2, 3, 4, 5].map((step) => {
+              const isActive = step === currentStep;
+              const isPast = step < currentStep;
+              return (
+                <React.Fragment key={step}>
+                  <View
+                    style={[
+                      styles.timelineDot,
+                      isActive ? styles.timelineDotActive : null,
+                      isPast ? styles.timelineDotPast : null,
+                    ]}
+                  >
+                    {isPast ? (
+                      <MaterialIcons name="check" size={12} color="#ffffff" />
+                    ) : (
+                      <Text style={[styles.timelineDotText, isActive ? styles.timelineDotTextActive : null]}>
+                        {step}
+                      </Text>
+                    )}
+                  </View>
+                  {step < 5 && (
+                    <View style={[styles.timelineLine, isPast ? styles.timelineLinePast : null]} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </View>
+
+          {/* Steps Viewport */}
+          <ScrollView style={styles.viewport} contentContainerStyle={styles.viewportContent}>
+            {currentStep === 1 && (
+              <View style={styles.stepContainer}>
+                <Text style={styles.stepTitle}>Dados Básicos do Veículo</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Placa</Text>
+                  <TextInput
+                    style={[styles.input, styles.plateInput]}
+                    placeholder="ABC1D23"
+                    value={plate}
+                    onChangeText={(val) => setPlate(formatPlateInput(val))}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Modelo</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ex: Honda Civic"
+                    value={model}
+                    onChangeText={setModel}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Cor</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                    {colorsList.map((c) => {
+                      const isSelected = color === c.value;
+                      return (
+                        <TouchableOpacity
+                          key={c.value}
+                          onPress={() => setColor(c.value)}
+                          style={[
+                            styles.colorOption,
+                            isSelected && styles.colorOptionSelected,
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.colorCircle, { backgroundColor: c.hex }, c.value === 'Branco' && { borderWidth: 1, borderColor: '#e2e8f0' }]} />
+                          <Text style={[styles.colorText, isSelected && styles.colorTextSelected]}>{c.label}</Text>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+
+            {currentStep === 2 && (
+              <View style={styles.stepContainer}>
+                <Text style={styles.stepTitle}>Categorias</Text>
+
+                <View style={styles.searchContainer}>
+                  <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar categoria..."
+                    placeholderTextColor="#94a3b8"
+                    value={categorySearch}
+                    onChangeText={setCategorySearch}
+                  />
+                </View>
+                
+                {loadingCategories ? (
+                  <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 40 }} />
+                ) : (
+                  <View style={styles.categoryGrid}>
+                    {(() => {
+                      const filteredCategories = categories.filter((cat: Category) =>
+                        !categorySearch || cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+                      );
+
+                      if (filteredCategories.length === 0) {
+                        return (
+                          <Text style={{ textAlign: 'center', color: '#64748b', marginTop: 20, width: '100%' }}>
+                            Nenhuma categoria encontrada para "{categorySearch}"
+                          </Text>
+                        );
+                      }
+
+                      return filteredCategories.map((cat: Category) => {
+                        const isSelected = !!selectedCategories.find(c => c.id === cat.id);
+                        return (
+                          <TouchableOpacity
+                            key={cat.id}
+                            style={[styles.categoryCard, isSelected ? styles.categoryCardSelected : null]}
+                            onPress={() => toggleCategory(cat)}
+                            activeOpacity={0.7}
+                          >
+                            <MaterialIcons
+                              name="directions-car"
+                              size={28}
+                              color={isSelected ? '#ffffff' : '#64748b'}
+                            />
+                            <Text style={[styles.categoryCardText, isSelected ? styles.categoryCardTextSelected : null]}>
+                              {cat.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      });
+                    })()}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {currentStep === 3 && (
+              <View style={styles.stepContainer}>
+                <Text style={styles.stepTitle}>Selecione os Serviços</Text>
+                <Text style={styles.stepDesc}>Serviços das categorias: {selectedCategories.map(c => c.name).join(', ')}</Text>
+                
+                <View style={styles.searchContainer}>
+                  <MaterialIcons name="search" size={20} color="#94a3b8" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar serviço..."
+                    placeholderTextColor="#94a3b8"
+                    value={serviceSearch}
+                    onChangeText={setServiceSearch}
+                  />
+                </View>
+
+                {loadingServices ? (
+                  <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 40 }} />
+                ) : (
+                  <View style={styles.servicesList}>
+                    {(() => {
+                      const grouped: Record<number, Service[]> = {};
+                      services.forEach((svc: Service) => {
+                        if (serviceSearch && !svc.name.toLowerCase().includes(serviceSearch.toLowerCase())) {
+                          return;
+                        }
+                        const catId = svc.category_id || 0;
+                        if (!grouped[catId]) grouped[catId] = [];
+                        grouped[catId].push(svc);
+                      });
+
+                      const renderedGroups = Object.keys(grouped).map(catIdStr => {
+                        const catId = parseInt(catIdStr, 10);
+                        const cat = selectedCategories.find(c => c.id === catId);
+                        const catName = cat ? cat.name : 'Outros';
+                        const groupServices = grouped[catId];
+                        
+                        if (groupServices.length === 0) return null;
+
+                        return (
+                          <View key={catId} style={styles.categorySection}>
+                            <Text style={styles.categorySectionTitle}>{catName}</Text>
+                            {groupServices.map((svc: Service) => {
+                              const qty = getServiceQuantity(svc.id);
+                              const isSelected = qty > 0;
+                              return (
+                                <View key={svc.id} style={[styles.serviceRow, isSelected ? styles.serviceRowSelected : null]}>
+                                  <View style={styles.serviceRowLeft}>
+                                    <Text style={[styles.serviceRowText, isSelected ? styles.serviceRowTextSelected : null]}>
+                                      {svc.name}
+                                    </Text>
+                                    <Text style={[styles.serviceRowPrice, isSelected ? styles.serviceRowPriceSelected : null]}>
+                                      {formatCurrencyBRL(svc.price)}
+                                    </Text>
+                                  </View>
+                                  
+                                  <View style={styles.qtyControls}>
+                                    <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty - 1)} style={styles.qtyBtn} activeOpacity={0.7} disabled={qty === 0}>
+                                      <MaterialIcons name="remove" size={16} color={qty > 0 ? "#0f172a" : "#cbd5e1"} />
+                                    </TouchableOpacity>
+                                    <Text style={[styles.qtyText, qty === 0 && { color: '#cbd5e1' }]}>{qty}</Text>
+                                    <TouchableOpacity onPress={() => updateServiceQuantity(svc, qty + 1)} style={styles.qtyBtn} activeOpacity={0.7}>
+                                      <MaterialIcons name="add" size={16} color="#0f172a" />
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        );
+                      });
+                      
+                      if (renderedGroups.every(g => g === null)) {
+                        return (
+                          <Text style={{textAlign: 'center', color: '#64748b', marginTop: 20}}>
+                            Nenhum serviço encontrado para "{serviceSearch}"
+                          </Text>
+                        );
+                      }
+                      return renderedGroups;
+                    })()}
+                  </View>
+                )}
+
+                <View style={styles.accumulatedBox}>
+                  <Text style={styles.accumulatedLabel}>Subtotal Acumulado:</Text>
+                  <Text style={styles.accumulatedVal}>
+                    {formatCurrencyBRL(getSubtotal())}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {currentStep === 4 && (
+              <View style={styles.stepContainer}>
+                <Text style={styles.stepTitle}>Empresa Parceira</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Empresa Conveniada (Opcional)</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownToggle}
+                    onPress={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.dropdownToggleText, !selectedCompany && { color: '#94a3b8' }]}>
+                      {selectedCompany ? (selectedCompany.fantasy_name || selectedCompany.company_name) : 'Selecione uma empresa'}
+                    </Text>
+                    <MaterialIcons name={showCompanyDropdown ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#64748b" />
+                  </TouchableOpacity>
+                  
+                  {showCompanyDropdown && (
+                    <View style={styles.dropdownList}>
+                      <View style={[styles.searchContainer, { marginHorizontal: 8, marginTop: 8, marginBottom: 8, height: 38 }]}>
+                        <MaterialIcons name="search" size={18} color="#94a3b8" style={styles.searchIcon} />
+                        <TextInput
+                          style={[styles.searchInput, { fontSize: 13, height: 36 }]}
+                          placeholder="Buscar empresa..."
+                          placeholderTextColor="#94a3b8"
+                          value={companySearch}
+                          onChangeText={setCompanySearch}
+                        />
+                      </View>
+                      <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                        <TouchableOpacity
+                          style={[styles.dropdownItem, selectedCompany === null && styles.dropdownItemSelected]}
+                          onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(false); setCompanySearch(''); }}
+                        >
+                          <Text style={[styles.dropdownItemText, selectedCompany === null && styles.dropdownItemTextSelected]}>
+                            Nenhuma
+                          </Text>
+                          {selectedCompany === null && <MaterialIcons name="check" size={20} color="#0f172a" />}
+                        </TouchableOpacity>
+                        
+                        {(() => {
+                          const filtered = companies.filter((comp: Company) => {
+                            const name = (comp.fantasy_name || comp.company_name || '').toLowerCase();
+                            return name.includes(companySearch.toLowerCase());
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <Text style={{ textAlign: 'center', color: '#64748b', marginVertical: 12, fontSize: 13 }}>
+                                Nenhuma empresa encontrada
+                              </Text>
+                            );
+                          }
+
+                          return filtered.map((comp: Company) => {
+                            const isSelected = selectedCompany?.id === comp.id;
+                            return (
+                              <TouchableOpacity
+                                key={comp.id}
+                                style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]}
+                                onPress={() => { setSelectedCompany(comp); setShowCompanyDropdown(false); setCompanySearch(''); }}
+                              >
+                                <Text style={[styles.dropdownItemText, isSelected && styles.dropdownItemTextSelected]} numberOfLines={1}>
+                                  {comp.fantasy_name || comp.company_name}
+                                </Text>
+                                {isSelected && <MaterialIcons name="check" size={20} color="#0f172a" />}
+                              </TouchableOpacity>
+                            );
+                          });
+                        })()}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {currentStep === 5 && (
+              <View style={styles.stepContainer}>
+                <Text style={styles.stepTitle}>Resumo do Registro</Text>
+                
+                <View style={styles.invoiceCard}>
+                  {/* License Plate Banner */}
+                  <View style={styles.invoicePlate}>
+                    <View style={styles.invoicePlateHeader}>
+                      <Text style={styles.invoicePlateHeaderText}>BRASIL</Text>
+                    </View>
+                    <Text style={styles.invoicePlateVal}>{formatPlateDisplay(plate)}</Text>
+                  </View>
+
+                  <View style={styles.invoiceMeta}>
+                    <View style={styles.invoiceMetaRow}>
+                      <Text style={styles.invoiceMetaLabel}>Modelo:</Text>
+                      <Text style={styles.invoiceMetaVal}>{model}</Text>
+                    </View>
+                    <View style={styles.invoiceMetaRow}>
+                      <Text style={styles.invoiceMetaLabel}>Cor:</Text>
+                      <Text style={styles.invoiceMetaVal}>{color}</Text>
+                    </View>
+                    <View style={styles.invoiceMetaRow}>
+                      <Text style={styles.invoiceMetaLabel}>Categorias:</Text>
+                      <Text style={styles.invoiceMetaVal} numberOfLines={1}>
+                        {selectedCategories.map(c => c.name).join(', ')}
+                      </Text>
+                    </View>
+                    {selectedCompany && (
+                      <View style={styles.invoiceMetaRow}>
+                        <Text style={styles.invoiceMetaLabel}>Convênio:</Text>
+                        <Text style={styles.invoiceMetaVal}>{selectedCompany.fantasy_name || selectedCompany.company_name}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.invoiceServices}>
+                    <Text style={styles.invoiceSectionTitle}>Serviços Contratados</Text>
+                    {selectedServices.map((svc) => (
+                      <View key={svc.id} style={styles.invoiceSvcRow}>
+                        <Text style={styles.invoiceSvcName}>• {svc.name} (x{svc.quantity})</Text>
+                        <Text style={styles.invoiceSvcPrice}>
+                          {formatCurrencyBRL(svc.price * svc.quantity)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={styles.invoicePricing}>
+                    <View style={styles.invoicePricingRow}>
+                      <Text style={styles.invoicePriceLabel}>Subtotal:</Text>
+                      <Text style={styles.invoicePriceValue}>
+                        {formatCurrencyBRL(getSubtotal())}
+                      </Text>
+                    </View>
+                    
+                    {discountCents > 0 && (
+                      <View style={styles.invoicePricingRow}>
+                        <Text style={styles.invoicePriceLabel}>Desconto:</Text>
+                        <Text style={[styles.invoicePriceValue, { color: '#ef4444' }]}>
+                          - {formatCurrencyBRL(discountCents)}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={[styles.invoicePricingRow, styles.invoiceGrandTotalRow]}>
+                      <Text style={styles.invoiceTotalLabel}>Valor Final:</Text>
+                      <Text style={styles.invoiceTotalValue}>
+                        {formatCurrencyBRL(getNetPrice())}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={[styles.inputGroup, { marginTop: 20 }]}>
+                  <Text style={styles.inputLabel}>Desconto Especial (Opcional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="R$ 0,00"
+                    keyboardType="numeric"
+                    value={discountStr}
+                    onChangeText={handleDiscountChange}
+                  />
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Nav Controls */}
+          <View style={styles.footerControls}>
+            {currentStep > 1 ? (
+              <TouchableOpacity style={styles.backBtn} onPress={handlePrevStep} activeOpacity={0.7}>
+                <Text style={styles.backBtnText}>Voltar</Text>
+              </TouchableOpacity>
+            ) : (
+              <View />
+            )}
+
+            {currentStep < 5 ? (
+              <TouchableOpacity style={styles.nextBtn} onPress={handleNextStep} activeOpacity={0.8}>
+                <Text style={styles.nextBtnText}>Avançar</Text>
+                <MaterialIcons name="arrow-forward" size={16} color="#ffffff" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.saveBtn, updateMutation.isPending ? styles.saveBtnDisabled : null]}
+                onPress={handleSave}
+                activeOpacity={0.8}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <MaterialIcons name="save" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text style={styles.saveBtnText}>Salvar Alterações</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '90%',
+    paddingBottom: 24,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  sheetSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    padding: 6,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
+  },
+  timeline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#f8fafc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  timelineDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timelineDotActive: {
+    backgroundColor: '#0f172a',
+  },
+  timelineDotPast: {
+    backgroundColor: '#10b981',
+  },
+  timelineDotText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '700',
+  },
+  timelineDotTextActive: {
+    color: '#ffffff',
+  },
+  timelineLine: {
+    flex: 1,
+    height: 3,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 8,
+  },
+  timelineLinePast: {
+    backgroundColor: '#10b981',
+  },
+  viewport: {
+    flex: 1,
+  },
+  viewportContent: {
+    padding: 24,
+    paddingBottom: 150,
+  },
+  stepContainer: {
+    width: '100%',
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6,
+  },
+  stepDesc: {
+    fontSize: 13,
+    color: '#64748b',
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 6,
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  plateInput: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  colorOption: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  colorOptionSelected: {
+    borderColor: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  colorCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  colorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  colorTextSelected: {
+    color: '#0f172a',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  categoryCard: {
+    width: '46%',
+    aspectRatio: 1.1,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 12,
+  },
+  categoryCardSelected: {
+    borderColor: '#0f172a',
+    backgroundColor: '#0f172a',
+  },
+  categoryCardText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  categoryCardTextSelected: {
+    color: '#ffffff',
+  },
+  servicesList: {
+    paddingBottom: 24,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  categorySection: {
+    marginBottom: 20,
+  },
+  categorySectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    marginBottom: 10,
+  },
+  serviceRowSelected: {
+    borderColor: '#0f172a',
+    backgroundColor: '#f8fafc',
+  },
+  serviceRowLeft: {
+    flex: 1,
+  },
+  serviceRowText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  serviceRowTextSelected: {
+    color: '#0f172a',
+  },
+  serviceRowPrice: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  serviceRowPriceSelected: {
+    color: '#334155',
+  },
+  qtyControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    padding: 4,
+  },
+  qtyBtn: {
+    padding: 4,
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginHorizontal: 12,
+  },
+  accumulatedBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  accumulatedLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  accumulatedVal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  dropdownToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+  },
+  dropdownToggleText: {
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  dropdownList: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#f8fafc',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#334155',
+    flex: 1,
+  },
+  dropdownItemTextSelected: {
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  invoiceCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  invoicePlate: {
+    backgroundColor: '#f8fafc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    alignItems: 'center',
+    paddingBottom: 12,
+  },
+  invoicePlateHeader: {
+    backgroundColor: '#2563eb',
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  invoicePlateHeaderText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  invoicePlateVal: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: 2,
+    marginTop: 8,
+  },
+  invoiceMeta: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  invoiceMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  invoiceMetaLabel: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  invoiceMetaVal: {
+    fontSize: 13,
+    color: '#1e293b',
+    fontWeight: '700',
+    maxWidth: '70%',
+    textAlign: 'right',
+  },
+  invoiceServices: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    borderStyle: 'dashed',
+  },
+  invoiceSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 12,
+  },
+  invoiceSvcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  invoiceSvcName: {
+    fontSize: 13,
+    color: '#475569',
+    flex: 1,
+  },
+  invoiceSvcPrice: {
+    fontSize: 13,
+    color: '#1e293b',
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  invoicePricing: {
+    padding: 16,
+    backgroundColor: '#f8fafc',
+  },
+  invoicePricingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  invoicePriceLabel: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  invoicePriceValue: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '700',
+  },
+  invoiceGrandTotalRow: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    alignItems: 'center',
+  },
+  invoiceTotalLabel: {
+    fontSize: 15,
+    color: '#0f172a',
+    fontWeight: '800',
+  },
+  invoiceTotalValue: {
+    fontSize: 18,
+    color: '#10b981',
+    fontWeight: '900',
+  },
+  footerControls: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    gap: 12,
+  },
+  backBtn: {
+    flex: 1,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  nextBtn: {
+    flex: 1,
+    height: 48,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    borderRadius: 8,
+  },
+  nextBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  saveBtn: {
+    flex: 2,
+    height: 48,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    borderRadius: 8,
+  },
+  saveBtnDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  saveBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+});
